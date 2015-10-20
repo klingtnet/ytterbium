@@ -1,0 +1,15 @@
+[package]
+name = "ytterbium"
+version = "0.1.0"
+authors = ["Andreas Linz <klingt.net@gmail.com>"]
+description = "An OSC controllable realtime audio synthesizer written in Rust"
+keywords = ["audio", "synth", "synthesizer", "osc"]
+# documentation = "..."
+# homepage = "https://klingt.net"
+# repository = "..."
+# license = "MIT"
+# license-file = "LICENSE"
+readme = "README.md"
+
+[dependencies]
+# none
