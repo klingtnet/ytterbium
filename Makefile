@@ -1,6 +1,7 @@
 .PHONY: clean
 
 SOURCES:=$(wildcard ./src/*.rs)
+BENCHES:=$(wildcard ./benches/*.rs)
 TESTS:=$(wildcard ./tests/*.rs)
 EXAMPLES:=$(wildcard ./examples/*.rs)
 BUILD_OPTS:=--jobs $(shell nproc)
@@ -9,6 +10,9 @@ all: test build examples doc
 
 build: $(SOURCES)
 	cargo build $(BUILD_OPTS)
+
+bench: $(SOURCES) $(BENCHES)
+	cargo bench
 
 release: test $(SOURCES)
 	cargo build --release $(BUILD_OPTS)
