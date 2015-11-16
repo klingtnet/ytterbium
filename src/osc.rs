@@ -120,7 +120,7 @@ impl Osc for Lookup {
     }
     fn tick(&mut self) -> f64 {
         let cur = self.pos;
-        self.pos = if self.pos + self.w > PI64 * 2.0 {
+        self.pos = if self.pos + self.w > self.table.len() as f64 {
             0.0
         } else {
             self.pos + self.w
