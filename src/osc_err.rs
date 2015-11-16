@@ -34,7 +34,7 @@ fn main() {
              min(pa.iter()),
              max(pa.iter()));
     println!("RotMat: min: {}\tmax: {}", min(rot.iter()), max(rot.iter()));
-    println!("Loookup: min: {}\tmax: {}",
+    println!("Lookup: min: {}\tmax: {}",
              min(lookup.iter()),
              max(lookup.iter()));
     println!("{}\t{}\t{}", pa_err, rot_err, lookup_err);
