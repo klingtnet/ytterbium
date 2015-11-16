@@ -17,3 +17,8 @@ rosc = { version = "0.1.0", path = "../rosc" }
 [[bin]]
 doc = false
 name = "ytterbium"
+
+[[bin]]
+doc = false
+name = "osc_err"
+path = "src/osc_err.rs"
