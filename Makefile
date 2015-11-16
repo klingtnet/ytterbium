@@ -12,7 +12,9 @@ build: $(SOURCES)
 	cargo build $(BUILD_OPTS)
 
 bench: $(SOURCES) $(BENCHES)
+	multirust default nightly
 	cargo bench
+	multirust default stable
 
 release: test $(SOURCES)
 	cargo build --release $(BUILD_OPTS)
