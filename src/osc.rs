@@ -96,3 +96,35 @@ impl Osc for RotMat {
         self.v[1]
     }
 }
+
+pub struct Lookup {
+    w: f64,
+    fs: usize,
+    phase: f64,
+    table: Vec<f64>,
+    pos: f64,
+}
+impl Osc for Lookup {
+    fn new(fs: usize, f: f64, phase: f64) -> Self {
+        let w = pulsatance(fs, f);
+        Lookup {
+            w: w,
+            fs: fs,
+            phase: phase,
+            pos: 0.0,
+            table: (0..fs).map(|i| f64::sin(w * i as f64)).collect(),
+        }
+    }
+    fn freq(&mut self, f: f64) {
+        self.w = pulsatance(self.fs, f);
+    }
+    fn tick(&mut self) -> f64 {
+        let cur = self.pos;
+        self.pos = if self.pos + self.w > PI64 * 2.0 {
+            0.0
+        } else {
+            self.pos + self.w
+        };
+        self.table[cur as usize]
+    }
+}
