@@ -1,6 +1,6 @@
 mod osc;
 use osc::{Osc, Simple, PhaseAccu, RotMat, Lookup};
-use std::{f64, cmp, slice};
+use std::{f64, slice};
 
 const FS: usize = 48000;
 const F: f64 = 440.0;
