@@ -12,4 +12,4 @@ keywords = ["audio", "synth", "synthesizer", "osc"]
 readme = "README.md"
 
 [dependencies]
-# none
+rosc = { version = "0.1.0", path = "../rosc" }
