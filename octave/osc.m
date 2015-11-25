@@ -1,6 +1,8 @@
 % sampling rate
 fs = 8*10^3;
 f  = 2;
+% table size
+ts = 1024;
 phi = 0;
 dur = 1;
 order = 64;
@@ -10,9 +12,9 @@ source('osc_functions.m');
 naive_wave = naive(f,fs,phi,dur);
 rot_wave = rot(f,fs,phi,dur); rot_err = abs(sum(rot_wave - naive_wave));
 phasor_wave = phasor(f,fs,phi,dur); phasor_err = abs(sum(phasor_wave - naive_wave));
-sine_table = create_sine_table(1024,phi);
+sine_table = create_sine_table(ts,phi);
 itlo_wave  = itlo(f,fs,phi,dur,sine_table); itlo_err = abs(sum(itlo_wave - naive_wave));
-saw_table = create_saw_table(1024,phi,order);
+saw_table = create_saw_table(ts,phi,order);
 itlo_saw_wave = itlo(f,fs,phi,dur,saw_table);
 
 subplot(2,3,1);
