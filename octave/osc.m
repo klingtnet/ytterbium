@@ -1,11 +1,11 @@
 % sampling rate
 fs = 8*10^3;
-f  = 2;
 % table size
 ts = 1024;
+f  = 0.1*fs;
 phi = 0;
 dur = 1;
-order = 64;
+order = 32;
 
 source('osc_functions.m');
 
