@@ -21,6 +21,11 @@ itlo_saw_wave = itlo(f,fs,phi,dur,saw_table);
 itlo_tri_wave = itlo(f,fs,phi,dur,tri_table);
 itlo_sqr_wave = itlo(f,fs,phi,dur,sqr_table);
 
+% write to wavefile
+audiowrite('saw.wav', itlo_saw_wave, fs);
+audiowrite('tri.wav', itlo_tri_wave, fs);
+audiowrite('sqr.wav', itlo_sqr_wave, fs);
+
 subplot(2,3,1);
 spectrum_plot(fs, rot_wave, 'rot');
 
