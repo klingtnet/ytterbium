@@ -1,5 +1,10 @@
+extern crate rosc;
 extern crate docopt;
 extern crate rustc_serialize;
+
+use std::net::{Ipv4Addr, UdpSocket, AddrParseError};
+use std::io;
+use std::str::FromStr;
 
 /// `r#"..."` are so called *raw* strings (don't need to be escaped)
 const USAGE: &'static str = r#"
@@ -49,5 +54,28 @@ fn main() {
                          })
                          .and_then(|args| check(args))
                          .unwrap_or_else(|err| err.exit());
-    println!("{:?}", args)
+    run(args).unwrap()
+}
+
+#[derive(Debug)]
+enum RunError {
+    Unimplemented,
+    AddrError(AddrParseError),
+    SocketError(io::Error),
+    OscError(rosc::OscError),
+}
+
+fn run(args: Args) -> Result<(), RunError> {
+    let ipv4_addr = try!(Ipv4Addr::from_str(&args.flag_addr)
+                             .map_err(|err| RunError::AddrError(err)));
+    let socket = try!(UdpSocket::bind((ipv4_addr, args.flag_in_port as u16))
+                          .map_err(|err| RunError::SocketError(err)));
+    let mut buf = [0u8; rosc::decoder::MTU];
+    loop {
+        let (size, addr) = try!(socket.recv_from(&mut buf)
+                                      .map_err(|err| RunError::SocketError(err)));
+        let packet = try!(rosc::decoder::decode(&buf).map_err(|err| RunError::OscError(err)));
+        println!("{:?}", packet);
+    }
+    Ok(())
 }
