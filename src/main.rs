@@ -1,7 +1,7 @@
 extern crate docopt;
 extern crate rustc_serialize;
 
-/// This is a raw string that does'nt need to be escaped.
+/// `r#"..."` are so called *raw* strings (don't need to be escaped)
 const USAGE: &'static str = r#"
 Ytterbium OSC controllable synthesizer
 
