@@ -12,6 +12,8 @@ keywords = ["audio", "synth", "synthesizer", "osc"]
 readme = "README.md"
 
 [dependencies]
+docopt = "^0.6"
+rustc-serialize = "^0.3"
 
 [[bin]]
 doc = false
