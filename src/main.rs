@@ -6,11 +6,12 @@ const USAGE: &'static str = r#"
 Ytterbium OSC controllable synthesizer
 
 Usage:
-    ytterbium [--port=<port> --addr=<addr> --sample-rate=<sr>]
+    ytterbium [--in-port=<port> --out-port=<port> --addr=<addr> --sample-rate=<sr>]
     ytterbium (-h | --help | --version)
 
 Options:
-    --port=<port>       OSC listening port. [default: 9090]
+    --in-port=<port>    OSC listening port. [default: 9090]
+    --out-port=<port>   OSC listening port. [default: 9091]
     --addr=<addr>       Network interface to listen on. [default: 0.0.0.0]
     --sample-rate=<sr>  Playback sample rate. [default: 48000]
     -h --help           Show this help page.
@@ -19,7 +20,8 @@ Options:
 
 #[derive(Debug, RustcDecodable)]
 struct Args {
-    flag_port: usize,
+    flag_in_port: usize,
+    flag_out_port: usize,
     flag_addr: String,
     flag_sample_rate: usize,
     flag_help: bool,
