@@ -4,3 +4,4 @@ target/
 *.rlib
 .vscode/
 *.wav
+*.swp
