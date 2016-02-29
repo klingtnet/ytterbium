@@ -32,7 +32,7 @@ const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 fn check(args: Args) -> Result<Args, docopt::Error> {
     if args.flag_in_port > 65536 || args.flag_out_port > 65536 {
-        Err(docopt::Error::Decode("Port out of range, must be in [0, 65535]".to_string()))
+        Err(docopt::Error::Decode("Port out of range, must be in [0, 65535]".to_owned()))
     } else {
         Ok(args)
     }
