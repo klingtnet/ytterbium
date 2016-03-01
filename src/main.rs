@@ -76,7 +76,7 @@ enum RunError {
 
 pub enum ControlEvent {
     Osc(rosc::OscPacket),
-    Midi(midi::MidiMessage),
+    Midi(midi::MidiEvent),
 }
 
 fn osc_receiver(socket: UdpSocket, tx: mpsc::Sender<ControlEvent>) -> Result<(), RunError> {
