@@ -6,6 +6,7 @@ use std::net::{Ipv4Addr, UdpSocket, AddrParseError};
 use std::io;
 use std::str::FromStr;
 use std::thread;
+use std::sync::mpsc; // multiple producer/single consumer
 
 /// `r#"..."` are so called *raw* strings (don't need to be escaped)
 const USAGE: &'static str = r#"
@@ -69,26 +70,46 @@ enum RunError {
     ThreadError(String),
 }
 
-fn osc_receiver(socket: UdpSocket) -> Result<(), RunError> {
+pub enum ControlEvent {
+    Osc(rosc::OscPacket),
+}
+
+fn osc_receiver(socket: UdpSocket, tx: mpsc::Sender<ControlEvent>) -> Result<(), RunError> {
     let mut buf = [0u8; rosc::decoder::MTU];
     loop {
         let (size, addr) = try!(socket.recv_from(&mut buf)
                                       .map_err(|err| RunError::SocketError(err)));
         let packet = try!(rosc::decoder::decode(&buf).map_err(|err| RunError::OscError(err)));
-        println!("{:?}", packet);
+        tx.send(ControlEvent::Osc(packet)).unwrap();
     }
 
 }
 
-fn run(args: Args) -> Result<(), RunError> {
+fn udp_socket(args: &Args) -> Result<UdpSocket, RunError> {
     let ipv4_addr = try!(Ipv4Addr::from_str(&args.flag_addr)
                              .map_err(|err| RunError::AddrError(err)));
-    let socket = try!(UdpSocket::bind((ipv4_addr, args.flag_in_port as u16))
-                          .map_err(|err| RunError::SocketError(err)));
+    UdpSocket::bind((ipv4_addr, args.flag_in_port as u16))
+                          .map_err(|err| RunError::SocketError(err))
+}
+
+fn event_router(rx: mpsc::Receiver<ControlEvent>) {
+    loop {
+        match rx.recv().unwrap() {
+            ControlEvent::Osc(packet) => println!("{:?}", packet),
+        }
+    }
+}
+
+fn run(args: Args) -> Result<(), RunError> {
+    let socket = try!(udp_socket(&args));
+
+    let (tx, rx) = mpsc::channel();
     let osc = thread::Builder::new()
                   .name("osc".to_owned())
-                  .spawn(move || -> Result<(), RunError> { osc_receiver(socket) })
+                  .spawn(move || -> Result<(), RunError> { osc_receiver(socket, tx) })
                   .unwrap();
+
+    let router = thread::Builder::new().name("router".to_owned()).spawn(move || event_router(rx)).unwrap();
     let res = osc.join();
     res.unwrap()
 }
