@@ -39,14 +39,6 @@ struct Args {
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-fn check(args: Args) -> Result<Args, docopt::Error> {
-    if args.flag_in_port > 65536 || args.flag_out_port > 65536 {
-        Err(docopt::Error::Decode("Port out of range, must be in [0, 65535]".to_owned()))
-    } else {
-        Ok(args)
-    }
-}
-
 fn main() {
     let argv: Vec<String> = ::std::env::args().collect();
     let args: Args = docopt::Docopt::new(USAGE)
@@ -56,7 +48,6 @@ fn main() {
                                    .argv(argv.into_iter())
                                    .decode::<Args>()
                          })
-                         .and_then(|args| check(args))
                          .unwrap_or_else(|err| err.exit());
     run(args).map_err(|err| println!("{:?}", err));
     println!("Exiting ...");
