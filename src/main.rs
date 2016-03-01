@@ -113,8 +113,7 @@ fn midi_receiver(tx: mpsc::Sender<ControlEvent>) -> Result<(), RunError> {
 fn udp_socket(args: &Args) -> Result<UdpSocket, RunError> {
     let ipv4_addr = try!(Ipv4Addr::from_str(&args.flag_addr)
                              .map_err(|err| RunError::AddrError(err)));
-    UdpSocket::bind((ipv4_addr, args.flag_in_port as u16))
-                          .map_err(|err| RunError::SocketError(err))
+    UdpSocket::bind((ipv4_addr, args.flag_in_port as u16)).map_err(|err| RunError::SocketError(err))
 }
 
 fn event_router(rx: mpsc::Receiver<ControlEvent>) {
