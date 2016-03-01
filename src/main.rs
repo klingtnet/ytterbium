@@ -204,8 +204,13 @@ fn run(args: Args) -> Result<(), RunError> {
                 .name("dsp".to_owned())
                 .spawn(move || {
                     loop {
-                        let msg = rx_dsp.recv().unwrap();
-                        println!("{:?}", msg);
+                        // TODO: busy wait loop, should be not so bad when the actual dsp
+                        // calculations take place
+
+                        // TODO: dsp and audio output are going to need shared audio buffer
+                        if let Ok(msg) = rx_dsp.try_recv() {
+                            // here comes the dsp code
+                        }
                     }
                 })
                 .unwrap();
