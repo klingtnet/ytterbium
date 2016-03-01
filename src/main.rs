@@ -2,6 +2,7 @@ extern crate rosc;
 extern crate docopt;
 extern crate rustc_serialize;
 extern crate portmidi as midi;
+extern crate rsoundio;
 
 use std::net::{Ipv4Addr, UdpSocket, AddrParseError};
 use std::io;
@@ -70,6 +71,7 @@ enum RunError {
     OscError(rosc::OscError),
     MidiError(midi::PortMidiError),
     ThreadError(String),
+    AudioError(rsoundio::SioError),
 }
 
 pub enum ControlEvent {
@@ -145,6 +147,15 @@ fn run(args: Args) -> Result<(), RunError> {
                      .name("router".to_owned())
                      .spawn(move || event_router(rx))
                      .unwrap();
+
+    let sio = rsoundio::SoundIo::new();
+    // connect to default backend
+    sio.connect();
+    sio.flush_events();
+    let dev = sio.default_output_device().unwrap();
+    let mut out = dev.create_outstream().unwrap();
+    // TODO: implement audio output in main thread
+
     let res = osc.join();
     res.unwrap()
 }
