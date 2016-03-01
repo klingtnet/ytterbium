@@ -9,6 +9,7 @@ use std::io;
 use std::str::FromStr;
 use std::thread;
 use std::sync::mpsc; // multiple producer/single consumer
+use rosc::{OscPacket, OscMessage, OscType};
 
 /// `r#"..."` are so called *raw* strings (don't need to be escaped)
 const USAGE: &'static str = r#"
@@ -77,6 +78,7 @@ enum RawControlEvent {
 #[derive(Debug)]
 enum ControlEvent {
     Unknown,
+    NoEvent,
     NoteOn,
     NoteOff,
 }
@@ -90,7 +92,33 @@ impl From<RawControlEvent> for ControlEvent {
 }
 
 fn translate_osc(packet: rosc::OscPacket) -> ControlEvent {
-    ControlEvent::Unknown
+    // TODO: map OSC packet to a ControlEvent
+    match packet {
+        OscPacket::Message(msg) => {
+            let addr: Vec<&str> = msg.addr.split('/').filter(|part| !part.is_empty()).collect();
+            // TODO: differentiate how to handle args by means of address
+            // this means, call a different match based on the control address
+            match msg.args {
+                Some(args) => {
+                    // TODO: iterate over args and build message
+                    match args[0] {
+                        OscType::Float(x) => {
+                            if x == 1.0 {
+                                ControlEvent::NoteOn
+                            } else if x == 0.0 {
+                                ControlEvent::NoteOff
+                            } else {
+                                ControlEvent::Unknown
+                            }
+                        }
+                        _ => ControlEvent::Unknown,
+                    }
+                }
+                None => ControlEvent::NoEvent,
+            }
+        }
+        OscPacket::Bundle(_) => ControlEvent::Unknown,
+    }
 }
 
 fn translate_midi(event: midi::MidiEvent) -> ControlEvent {
