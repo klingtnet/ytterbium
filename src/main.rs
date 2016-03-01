@@ -1,6 +1,7 @@
 extern crate rosc;
 extern crate docopt;
 extern crate rustc_serialize;
+extern crate portmidi as midi;
 
 use std::net::{Ipv4Addr, UdpSocket, AddrParseError};
 use std::io;
@@ -67,11 +68,13 @@ enum RunError {
     AddrError(AddrParseError),
     SocketError(io::Error),
     OscError(rosc::OscError),
+    MidiError(midi::PortMidiError),
     ThreadError(String),
 }
 
 pub enum ControlEvent {
     Osc(rosc::OscPacket),
+    Midi(midi::MidiMessage),
 }
 
 fn osc_receiver(socket: UdpSocket, tx: mpsc::Sender<ControlEvent>) -> Result<(), RunError> {
@@ -83,6 +86,25 @@ fn osc_receiver(socket: UdpSocket, tx: mpsc::Sender<ControlEvent>) -> Result<(),
         tx.send(ControlEvent::Osc(packet)).unwrap();
     }
 
+fn midi_receiver(tx: mpsc::Sender<ControlEvent>) -> Result<(), RunError> {
+    try!(midi::initialize().map_err(|err| RunError::MidiError(err)));
+    match midi::count_devices() as usize {
+        0 => {
+            println!("No Midi device found");
+            Ok(())
+        }
+        device_cnt @ _ => {
+            let mut devices: Vec<midi::DeviceInfo> = Vec::with_capacity(device_cnt);
+            for i in 0..device_cnt {
+                midi::get_device_info(i as i32).map(|info| devices.push(info));
+            }
+            println!("Found the following midi-devices:");
+            for device in devices {
+                println!("\tid: {}, name: {}", device.device_id, device.name);
+            }
+            midi::terminate().map_err(|err| RunError::MidiError(err))
+        }
+    }
 }
 
 fn udp_socket(args: &Args) -> Result<UdpSocket, RunError> {
@@ -95,7 +117,8 @@ fn udp_socket(args: &Args) -> Result<UdpSocket, RunError> {
 fn event_router(rx: mpsc::Receiver<ControlEvent>) {
     loop {
         match rx.recv().unwrap() {
-            ControlEvent::Osc(packet) => println!("{:?}", packet),
+            ControlEvent::Osc(packet) => println!("osc: {:?}", packet),
+            ControlEvent::Midi(msg) => println!("midi: {:?}", msg),
         }
     }
 }
@@ -104,12 +127,22 @@ fn run(args: Args) -> Result<(), RunError> {
     let socket = try!(udp_socket(&args));
 
     let (tx, rx) = mpsc::channel();
+    let osc_tx = tx.clone();
     let osc = thread::Builder::new()
                   .name("osc".to_owned())
-                  .spawn(move || -> Result<(), RunError> { osc_receiver(socket, tx) })
+                  .spawn(move || -> Result<(), RunError> { osc_receiver(socket, osc_tx) })
                   .unwrap();
 
-    let router = thread::Builder::new().name("router".to_owned()).spawn(move || event_router(rx)).unwrap();
+    let midi_tx = tx.clone();
+    let midi = thread::Builder::new()
+                   .name("midi".to_owned())
+                   .spawn(move || -> Result<(), RunError> { midi_receiver(midi_tx) })
+                   .unwrap();
+
+    let router = thread::Builder::new()
+                     .name("router".to_owned())
+                     .spawn(move || event_router(rx))
+                     .unwrap();
     let res = osc.join();
     res.unwrap()
 }
