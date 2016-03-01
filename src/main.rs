@@ -69,6 +69,17 @@ enum RunError {
     ThreadError(String),
 }
 
+fn osc_receiver(socket: UdpSocket) -> Result<(), RunError> {
+    let mut buf = [0u8; rosc::decoder::MTU];
+    loop {
+        let (size, addr) = try!(socket.recv_from(&mut buf)
+                                      .map_err(|err| RunError::SocketError(err)));
+        let packet = try!(rosc::decoder::decode(&buf).map_err(|err| RunError::OscError(err)));
+        println!("{:?}", packet);
+    }
+
+}
+
 fn run(args: Args) -> Result<(), RunError> {
     let ipv4_addr = try!(Ipv4Addr::from_str(&args.flag_addr)
                              .map_err(|err| RunError::AddrError(err)));
@@ -76,16 +87,7 @@ fn run(args: Args) -> Result<(), RunError> {
                           .map_err(|err| RunError::SocketError(err)));
     let osc = thread::Builder::new()
                   .name("osc".to_owned())
-                  .spawn(move || -> Result<(), RunError> {
-                      let mut buf = [0u8; rosc::decoder::MTU];
-                      loop {
-                          let (size, addr) = try!(socket.recv_from(&mut buf)
-                                                   .map_err(|err| RunError::SocketError(err)));
-                          let packet = try!(rosc::decoder::decode(&buf)
-                                           .map_err(|err| RunError::OscError(err)));
-                          println!("{:?}", packet);
-                      }
-                  })
+                  .spawn(move || -> Result<(), RunError> { osc_receiver(socket) })
                   .unwrap();
     let res = osc.join();
     res.unwrap()
