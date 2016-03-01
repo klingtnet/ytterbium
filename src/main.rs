@@ -19,12 +19,13 @@ Usage:
     ytterbium (-h | --help | --version)
 
 Options:
-    --in-port=<port>    OSC listening port. [default: 9090]
-    --out-port=<port>   OSC listening port. [default: 9091]
-    --addr=<addr>       Network interface to listen on. [default: 0.0.0.0]
-    --sample-rate=<sr>  Playback sample rate. [default: 48000]
-    -h --help           Show this help page.
-    --version           Print the version number and exit.
+    --in-port=<port>        OSC listening port. [default: 9090]
+    --out-port=<port>       OSC listening port. [default: 9091]
+    --addr=<addr>           Network interface to listen on. [default: 0.0.0.0]
+    --sample-rate=<sr>      Playback sample rate. [default: 48000]
+    -v --voices=<voices>    Number of voices [default: 1]
+    -h --help               Show this help page.
+    --version               Print the version number and exit.
 "#;
 
 #[derive(Debug, RustcDecodable)]
@@ -33,10 +34,12 @@ struct Args {
     flag_out_port: usize,
     flag_addr: String,
     flag_sample_rate: usize,
+    flag_voices: usize,
     flag_help: bool,
     flag_version: bool,
 }
 
+const MAX_VOICES: usize = 24;
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 fn main() {
