@@ -5,6 +5,7 @@ extern crate rustc_serialize;
 use std::net::{Ipv4Addr, UdpSocket, AddrParseError};
 use std::io;
 use std::str::FromStr;
+use std::thread;
 
 /// `r#"..."` are so called *raw* strings (don't need to be escaped)
 const USAGE: &'static str = r#"
@@ -54,15 +55,18 @@ fn main() {
                          })
                          .and_then(|args| check(args))
                          .unwrap_or_else(|err| err.exit());
-    run(args).unwrap()
+    run(args).map_err(|err| println!("{:?}", err));
+    println!("Exiting ...");
 }
 
 #[derive(Debug)]
 enum RunError {
+    Unknown,
     Unimplemented,
     AddrError(AddrParseError),
     SocketError(io::Error),
     OscError(rosc::OscError),
+    ThreadError(String),
 }
 
 fn run(args: Args) -> Result<(), RunError> {
@@ -70,12 +74,25 @@ fn run(args: Args) -> Result<(), RunError> {
                              .map_err(|err| RunError::AddrError(err)));
     let socket = try!(UdpSocket::bind((ipv4_addr, args.flag_in_port as u16))
                           .map_err(|err| RunError::SocketError(err)));
-    let mut buf = [0u8; rosc::decoder::MTU];
-    loop {
-        let (size, addr) = try!(socket.recv_from(&mut buf)
-                                      .map_err(|err| RunError::SocketError(err)));
-        let packet = try!(rosc::decoder::decode(&buf).map_err(|err| RunError::OscError(err)));
-        println!("{:?}", packet);
-    }
-    Ok(())
+    let osc = thread::Builder::new()
+                  .name("osc".to_owned())
+                  .spawn(move || {
+                      let mut buf = [0u8; rosc::decoder::MTU];
+                      loop {
+                          let (size, addr) = socket.recv_from(&mut buf)
+                                                   .map_err(|err| RunError::SocketError(err))
+                                                   .unwrap();
+                          let packet = rosc::decoder::decode(&buf)
+                                           .map_err(|err| RunError::OscError(err))
+                                           .unwrap();
+                          println!("{:?}", packet);
+                      }
+                  })
+                  .unwrap();
+    let res = osc.join();
+    res.map_err(|err| {
+        err.downcast_ref::<RunError>()
+           .map_or(RunError::Unknown,
+                   |err| RunError::ThreadError(format!("{:?}", err)))
+    })
 }
