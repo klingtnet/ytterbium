@@ -65,24 +65,48 @@ enum RunError {
     AudioError(rsoundio::SioError),
 }
 
-pub enum ControlEvent {
+#[derive(Debug)]
+enum RawControlEvent {
     Osc(rosc::OscPacket),
     Midi(midi::MidiEvent),
 }
 
-fn osc_receiver(socket: UdpSocket, tx: mpsc::Sender<ControlEvent>) -> Result<(), RunError> {
+#[derive(Debug)]
+enum ControlEvent {
+    Unknown,
+    NoteOn,
+    NoteOff,
+}
+impl From<RawControlEvent> for ControlEvent {
+    fn from(raw: RawControlEvent) -> ControlEvent {
+        match raw {
+            RawControlEvent::Osc(packet) => translate_osc(packet),
+            RawControlEvent::Midi(event) => translate_midi(event),
+        }
+    }
+}
+
+fn translate_osc(packet: rosc::OscPacket) -> ControlEvent {
+    ControlEvent::Unknown
+}
+
+fn translate_midi(event: midi::MidiEvent) -> ControlEvent {
+    ControlEvent::Unknown
+}
+
+fn osc_receiver(socket: UdpSocket, tx: mpsc::Sender<RawControlEvent>) -> Result<(), RunError> {
     let mut buf = [0u8; rosc::decoder::MTU];
     loop {
         let (size, addr) = try!(socket.recv_from(&mut buf)
                                       .map_err(|err| RunError::SocketError(err)));
         match rosc::decoder::decode(&buf).map_err(|err| RunError::OscError(err)) {
-            Ok(packet) => tx.send(ControlEvent::Osc(packet)).unwrap(),
+            Ok(packet) => tx.send(RawControlEvent::Osc(packet)).unwrap(),
             Err(e) => println!("Osc packet decoding error: {:?}", e),
         }
     }
 }
 
-fn midi_receiver(tx: mpsc::Sender<ControlEvent>) -> Result<(), RunError> {
+fn midi_receiver(tx: mpsc::Sender<RawControlEvent>) -> Result<(), RunError> {
     try!(midi::initialize().map_err(|err| RunError::MidiError(err)));
     match midi::count_devices() as usize {
         0 => {
@@ -109,35 +133,44 @@ fn udp_socket(args: &Args) -> Result<UdpSocket, RunError> {
     UdpSocket::bind((ipv4_addr, args.flag_in_port as u16)).map_err(|err| RunError::SocketError(err))
 }
 
-fn event_router(rx: mpsc::Receiver<ControlEvent>) {
+fn event_router(rx: mpsc::Receiver<RawControlEvent>, tx: mpsc::Sender<ControlEvent>) {
     loop {
-        match rx.recv().unwrap() {
-            ControlEvent::Osc(packet) => println!("osc: {:?}", packet),
-            ControlEvent::Midi(msg) => println!("midi: {:?}", msg),
-        }
+        let in_msg = rx.recv().unwrap();
+        tx.send(ControlEvent::from(in_msg)).unwrap();
     }
 }
 
 fn run(args: Args) -> Result<(), RunError> {
     let socket = try!(udp_socket(&args));
 
-    let (tx, rx) = mpsc::channel();
-    let osc_tx = tx.clone();
+    let (tx_router, rx_router) = mpsc::channel();
+    let osc_tx = tx_router.clone();
     let osc = thread::Builder::new()
                   .name("osc".to_owned())
                   .spawn(move || -> Result<(), RunError> { osc_receiver(socket, osc_tx) })
                   .unwrap();
 
-    let midi_tx = tx.clone();
-    let midi = thread::Builder::new()
-                   .name("midi".to_owned())
-                   .spawn(move || -> Result<(), RunError> { midi_receiver(midi_tx) })
-                   .unwrap();
+    let midi_tx = tx_router.clone();
+    let _ = thread::Builder::new()
+                .name("midi".to_owned())
+                .spawn(move || -> Result<(), RunError> { midi_receiver(midi_tx) })
+                .unwrap();
 
-    let router = thread::Builder::new()
-                     .name("router".to_owned())
-                     .spawn(move || event_router(rx))
-                     .unwrap();
+    let (tx_dsp, rx_dsp) = mpsc::channel();
+    let _ = thread::Builder::new()
+                .name("router".to_owned())
+                .spawn(move || event_router(rx_router, tx_dsp))
+                .unwrap();
+
+    let _ = thread::Builder::new()
+                .name("dsp".to_owned())
+                .spawn(move || {
+                    loop {
+                        let msg = rx_dsp.recv().unwrap();
+                        println!("{:?}", msg);
+                    }
+                })
+                .unwrap();
 
     let sio = rsoundio::SoundIo::new();
     // connect to default backend
