@@ -82,9 +82,12 @@ fn osc_receiver(socket: UdpSocket, tx: mpsc::Sender<ControlEvent>) -> Result<(),
     loop {
         let (size, addr) = try!(socket.recv_from(&mut buf)
                                       .map_err(|err| RunError::SocketError(err)));
-        let packet = try!(rosc::decoder::decode(&buf).map_err(|err| RunError::OscError(err)));
-        tx.send(ControlEvent::Osc(packet)).unwrap();
+        match rosc::decoder::decode(&buf).map_err(|err| RunError::OscError(err)) {
+            Ok(packet) => tx.send(ControlEvent::Osc(packet)).unwrap(),
+            Err(e) => println!("Osc packet decoding error: {:?}", e),
+        }
     }
+}
 
 fn midi_receiver(tx: mpsc::Sender<ControlEvent>) -> Result<(), RunError> {
     try!(midi::initialize().map_err(|err| RunError::MidiError(err)));
