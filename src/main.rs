@@ -120,7 +120,14 @@ fn midi_receiver(tx: mpsc::Sender<RawControlEvent>) -> Result<(), RunError> {
             }
             println!("Found the following midi-devices:");
             for device in devices {
-                println!("\tid: {}, name: {}", device.device_id, device.name);
+                println!("\tid: {}, name: {}, type: {}",
+                         device.device_id,
+                         device.name,
+                         if device.input {
+                             "input"
+                         } else {
+                             "output"
+                         });
             }
             midi::terminate().map_err(|err| RunError::MidiError(err))
         }
