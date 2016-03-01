@@ -122,6 +122,7 @@ fn translate_osc(packet: rosc::OscPacket) -> ControlEvent {
 }
 
 fn translate_midi(event: midi::MidiEvent) -> ControlEvent {
+    // TODO: Ignore midi messages until portmidi-rs is refactored
     ControlEvent::Unknown
 }
 
