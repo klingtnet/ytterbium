@@ -76,23 +76,17 @@ fn run(args: Args) -> Result<(), RunError> {
                           .map_err(|err| RunError::SocketError(err)));
     let osc = thread::Builder::new()
                   .name("osc".to_owned())
-                  .spawn(move || {
+                  .spawn(move || -> Result<(), RunError> {
                       let mut buf = [0u8; rosc::decoder::MTU];
                       loop {
-                          let (size, addr) = socket.recv_from(&mut buf)
-                                                   .map_err(|err| RunError::SocketError(err))
-                                                   .unwrap();
-                          let packet = rosc::decoder::decode(&buf)
-                                           .map_err(|err| RunError::OscError(err))
-                                           .unwrap();
+                          let (size, addr) = try!(socket.recv_from(&mut buf)
+                                                   .map_err(|err| RunError::SocketError(err)));
+                          let packet = try!(rosc::decoder::decode(&buf)
+                                           .map_err(|err| RunError::OscError(err)));
                           println!("{:?}", packet);
                       }
                   })
                   .unwrap();
     let res = osc.join();
-    res.map_err(|err| {
-        err.downcast_ref::<RunError>()
-           .map_or(RunError::Unknown,
-                   |err| RunError::ThreadError(format!("{:?}", err)))
-    })
+    res.unwrap()
 }
