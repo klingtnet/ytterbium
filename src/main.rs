@@ -30,6 +30,7 @@ Options:
     --sample-rate=<sr>      Playback sample rate. [default: 48000]
     -v --voices=<voices>    Number of voices [default: 1]
     -h --help               Show this help page.
+    --debug                 Print debugging information.
     --version               Print the version number and exit.
 "#;
 
@@ -41,6 +42,7 @@ struct Args {
     flag_sample_rate: usize,
     flag_voices: usize,
     flag_help: bool,
+    flag_debug: bool,
     flag_version: bool,
 }
 
