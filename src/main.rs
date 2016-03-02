@@ -3,8 +3,6 @@ extern crate docopt;
 extern crate rustc_serialize;
 extern crate rsoundio;
 
-use std::net::{Ipv4Addr, UdpSocket};
-use std::str::FromStr;
 use std::thread;
 use std::sync::mpsc; // multiple producer/single consumer
 
@@ -12,8 +10,8 @@ mod errors;
 use errors::RunError;
 
 mod event;
-use event::{receiver, router};
-//use receiver::{OscReceiver, MidiReceiver};
+use event::receiver::{Receiver, OscReceiver, MidiReceiver, RawControlEvent};
+use event::router::{EventRouter, ControlEvent};
 
 /// `r#"..."` are so called *raw* strings (don't need to be escaped)
 const USAGE: &'static str = r#"
@@ -63,32 +61,25 @@ fn main() {
     println!("Exiting ...");
 }
 
-fn udp_socket(args: &Args) -> Result<UdpSocket, RunError> {
-    let ipv4_addr = try!(Ipv4Addr::from_str(&args.flag_addr)
-                             .map_err(|err| RunError::AddrError(err)));
-    UdpSocket::bind((ipv4_addr, args.flag_in_port as u16)).map_err(|err| RunError::SocketError(err))
-}
-
 fn run(args: Args) -> Result<(), RunError> {
-    let socket = try!(udp_socket(&args));
+    let (tx_receiver, rx_router) = mpsc::channel();
+    let (tx_router, rx_dsp) = mpsc::channel();
+    let mut osc_receiver = try!(OscReceiver::new(args.flag_addr,
+                                                 args.flag_in_port as u16,
+                                                 tx_receiver.clone()));
+    // let mut midi_receiver = try!(MidiReceiver::new(tx_receiver.clone()));
+    let event_router = EventRouter::<RawControlEvent, ControlEvent>::new(rx_router, tx_router);
 
-    let (tx_router, rx_router) = mpsc::channel();
-    let osc_tx = tx_router.clone();
     let osc = thread::Builder::new()
                   .name("osc".to_owned())
-                  .spawn(move || -> Result<(), RunError> { receiver::osc_receiver(socket, osc_tx) })
+                  .spawn(move || osc_receiver.receive_and_send())
                   .unwrap();
 
-    let midi_tx = tx_router.clone();
-    let _ = thread::Builder::new()
-                .name("midi".to_owned())
-                .spawn(move || -> Result<(), RunError> { receiver::midi_receiver(midi_tx) })
-                .unwrap();
+    // let _ = thread::Builder::new().name("midi".to_owned()).spawn(move || {}).unwrap();
 
-    let (tx_dsp, rx_dsp) = mpsc::channel();
     let _ = thread::Builder::new()
                 .name("router".to_owned())
-                .spawn(move || router::event_router(rx_router, tx_dsp))
+                .spawn(move || event_router.route())
                 .unwrap();
 
     let _ = thread::Builder::new()
@@ -114,6 +105,6 @@ fn run(args: Args) -> Result<(), RunError> {
     let mut out = dev.create_outstream().unwrap();
     // TODO: implement audio output in main thread
 
-    let res = osc.join();
-    res.unwrap()
+    osc.join();
+    Ok(())
 }

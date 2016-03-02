@@ -2,8 +2,9 @@ extern crate portmidi as midi;
 extern crate rosc;
 
 use errors::RunError;
-use std::net::UdpSocket;
+use std::net::{UdpSocket, Ipv4Addr};
 use std::sync::mpsc;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub enum RawControlEvent {
@@ -11,45 +12,67 @@ pub enum RawControlEvent {
     Midi(midi::MidiEvent),
 }
 
-pub fn osc_receiver(socket: UdpSocket, tx: mpsc::Sender<RawControlEvent>) -> Result<(), RunError> {
-    let mut buf = [0u8; rosc::decoder::MTU];
-    loop {
-        let (size, addr) = try!(socket.recv_from(&mut buf)
-                                      .map_err(|err| RunError::SocketError(err)));
-        match rosc::decoder::decode(&buf).map_err(|err| RunError::OscError(err)) {
-            Ok(packet) => tx.send(RawControlEvent::Osc(packet)).unwrap(),
-            Err(e) => println!("Osc packet decoding error: {:?}", e),
+pub trait Receiver {
+    fn receive(&mut self) -> Result<RawControlEvent, RunError>;
+    fn receive_and_send(&mut self);
+}
+
+pub struct OscReceiver {
+    socket: UdpSocket,
+    tx: mpsc::Sender<RawControlEvent>,
+    buf: [u8; rosc::decoder::MTU],
+}
+impl OscReceiver {
+    pub fn new(ipv4: String,
+               port: u16,
+               tx: mpsc::Sender<RawControlEvent>)
+               -> Result<Self, RunError> {
+        let ipv4_addr = try!(Ipv4Addr::from_str(&ipv4).map_err(|err| RunError::AddrError(err)));
+        let socket = try!(UdpSocket::bind((ipv4_addr, port as u16))
+                              .map_err(|err| RunError::SocketError(err)));
+        Ok(OscReceiver {
+            socket: socket,
+            tx: tx, 
+            buf: [0u8; rosc::decoder::MTU],
+        })
+    }
+}
+impl Receiver for OscReceiver {
+    fn receive(&mut self) -> Result<RawControlEvent, RunError> {
+        let (size, addr) = try!(self.socket
+                                    .recv_from(&mut self.buf)
+                                    .map_err(|err| RunError::SocketError(err)));
+        rosc::decoder::decode(&self.buf)
+            .map(|msg| RawControlEvent::Osc(msg))
+            .map_err(|err| RunError::OscError(err))
+    }
+
+    fn receive_and_send(&mut self) {
+        loop {
+            match self.receive() {
+                Ok(raw_event) => self.tx.send(raw_event).unwrap(),
+                Err(RunError::OscError(err)) => println!("Could not decode osc packet: {:?}", err),
+                err @ _ => panic!(err),
+            }
         }
     }
 }
 
-pub fn midi_receiver(tx: mpsc::Sender<RawControlEvent>) -> Result<(), RunError> {
-    try!(midi::initialize().map_err(|err| RunError::MidiError(err)));
-    match midi::count_devices() as usize {
-        0 => {
-            println!("No Midi device found");
-            Ok(())
-        }
-        device_cnt @ _ => {
-            let mut devices: Vec<midi::DeviceInfo> = Vec::with_capacity(device_cnt);
-            for i in 0..device_cnt {
-                midi::get_device_info(i as i32).map(|info| devices.push(info));
-            }
-            println!("Found the following midi-devices:");
-            for device in devices {
-                println!("\tid: {}, name: {}, type: {}",
-                         device.device_id,
-                         device.name,
-
-                         if device.input {
-                             "input"
-                         } else {
-                             "output"
-                         });
-            }
-            midi::terminate().map_err(|err| RunError::MidiError(err))
-        }
+pub struct MidiReceiver {
+    // context: Midi,
+    tx: mpsc::Sender<RawControlEvent>,
+}
+impl MidiReceiver {
+    pub fn new(tx: mpsc::Sender<RawControlEvent>) -> Result<Self, RunError> {
+        Ok(MidiReceiver { tx: tx })
     }
 }
+impl Receiver for MidiReceiver {
+    fn receive(&mut self) -> Result<RawControlEvent, RunError> {
+        unimplemented!()
+    }
 
-
+    fn receive_and_send(&mut self) {
+        unimplemented!()
+    }
+}
