@@ -11,8 +11,8 @@ use std::sync::mpsc; // multiple producer/single consumer
 mod errors;
 use errors::RunError;
 
-mod receiver;
-mod router;
+mod event;
+use event::{receiver, router};
 //use receiver::{OscReceiver, MidiReceiver};
 
 /// `r#"..."` are so called *raw* strings (don't need to be escaped)
