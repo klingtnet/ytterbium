@@ -17,6 +17,7 @@ rustc-serialize = "^0.3"
 rosc = "^0.1"
 portmidi = "^0.2"
 rsoundio = "^0.1"
+rb = "^0.1"
 
 [[bin]]
 doc = false
