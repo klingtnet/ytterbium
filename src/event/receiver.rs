@@ -4,7 +4,9 @@ extern crate rosc;
 use errors::RunError;
 use std::net::{UdpSocket, Ipv4Addr};
 use std::sync::mpsc;
+use std::time::Duration;
 use std::str::FromStr;
+use std::thread;
 
 #[derive(Debug)]
 pub enum RawControlEvent {
@@ -59,7 +61,9 @@ impl Receiver for OscReceiver {
 }
 
 pub struct MidiReceiver {
-    // context: Midi,
+    context: midi::PortMidi,
+    in_ports: Vec<midi::InputPort>,
+    buf_len: usize,
     tx: mpsc::Sender<RawControlEvent>,
 }
 impl MidiReceiver {
@@ -90,10 +94,28 @@ impl MidiReceiver {
     }
 }
 impl MidiReceiver {
+    fn receive(&self, port: &midi::InputPort) -> Result<Option<Vec<midi::MidiEvent>>, RunError> {
+        port.read_n(self.buf_len).map_err(|err| RunError::MidiError(err))
     }
 }
 impl Receiver for MidiReceiver {
     fn receive_and_send(&mut self) {
-        unimplemented!()
+        let mut event_buf = Vec::with_capacity(self.buf_len);
+        loop {
+            for port in &self.in_ports {
+                match self.receive(port) {
+                    Ok(Some(mut events)) => event_buf.append(&mut events),
+                    Ok(_) => (),
+                    Err(RunError::MidiError(err)) => println!("receive_and_send) Error: {:?}", err),
+                    Err(err) => panic!(err),
+                }
+            }
+
+            while let Some(event) = event_buf.pop() {
+                self.tx.send(RawControlEvent::Midi(event)).unwrap();
+            }
+
+            thread::sleep(Duration::new(0, 50_000));
+        }
     }
 }
