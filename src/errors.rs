@@ -12,7 +12,8 @@ pub enum RunError {
     AddrError(AddrParseError),
     SocketError(io::Error),
     OscError(rosc::OscError),
-    MidiError(midi::PortMidiError),
+    MidiError(midi::Error),
+    NoMidiDeviceAvailable,
     ThreadError(String),
     AudioError(rsoundio::SioError),
 }
