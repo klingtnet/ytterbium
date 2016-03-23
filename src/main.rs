@@ -113,10 +113,17 @@ fn run(args: Args) -> Result<(), RunError> {
                 })
                 .unwrap();
 
+    let mut sio = rsoundio::SoundIo::new();
+    sio.set_name("ytterbium").unwrap();
     // connect to default backend
+    sio.connect().unwrap();
+    println!("Connected to: {}", sio.current_backend().unwrap());
     sio.flush_events();
     let dev = sio.default_output_device().unwrap();
     let mut out = dev.create_outstream().unwrap();
+    out.set_name("debug").ok();
+    out.set_format(rsoundio::SioFormat::Float32LE).unwrap();
+    println!("Format: {}", out.format().unwrap());
     out.register_write_callback(|out: rsoundio::OutStream,
                                  min_frame_count: u32,
                                  max_frame_count: u32| {
