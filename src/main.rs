@@ -73,7 +73,7 @@ fn run(args: Args) -> Result<(), RunError> {
     let mut osc_receiver = try!(OscReceiver::new(args.flag_addr,
                                                  args.flag_in_port as u16,
                                                  tx_receiver.clone()));
-    // let mut midi_receiver = try!(MidiReceiver::new(tx_receiver.clone()));
+    let mut midi_receiver = try!(MidiReceiver::new(tx_receiver.clone()));
     let event_router = EventRouter::<RawControlEvent, ControlEvent>::new(rx_router, tx_router);
 
     let osc = thread::Builder::new()
@@ -81,7 +81,10 @@ fn run(args: Args) -> Result<(), RunError> {
                   .spawn(move || osc_receiver.receive_and_send())
                   .unwrap();
 
-    // let _ = thread::Builder::new().name("midi".to_owned()).spawn(move || {}).unwrap();
+    let _ = thread::Builder::new()
+                .name("midi".to_owned())
+                .spawn(move || midi_receiver.receive_and_send())
+                .unwrap();
 
     let _ = thread::Builder::new()
                 .name("router".to_owned())
