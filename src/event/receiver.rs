@@ -13,7 +13,6 @@ pub enum RawControlEvent {
 }
 
 pub trait Receiver {
-    fn receive(&mut self) -> Result<RawControlEvent, RunError>;
     fn receive_and_send(&mut self);
 }
 
@@ -37,7 +36,7 @@ impl OscReceiver {
         })
     }
 }
-impl Receiver for OscReceiver {
+impl OscReceiver {
     fn receive(&mut self) -> Result<RawControlEvent, RunError> {
         let (size, addr) = try!(self.socket
                                     .recv_from(&mut self.buf)
@@ -46,7 +45,8 @@ impl Receiver for OscReceiver {
             .map(|msg| RawControlEvent::Osc(msg))
             .map_err(|err| RunError::OscError(err))
     }
-
+}
+impl Receiver for OscReceiver {
     fn receive_and_send(&mut self) {
         loop {
             match self.receive() {
@@ -64,14 +64,35 @@ pub struct MidiReceiver {
 }
 impl MidiReceiver {
     pub fn new(tx: mpsc::Sender<RawControlEvent>) -> Result<Self, RunError> {
-        Ok(MidiReceiver { tx: tx })
+        const BUF_LEN: usize = 1024;
+        let context = try!(midi::PortMidi::new().map_err(|err| RunError::MidiError(err)));
+        let in_devices = context.devices()
+                                .unwrap()
+                                .into_iter()
+                                .filter(|dev| dev.is_input())
+                                .collect::<Vec<midi::DeviceInfo>>();
+        let in_ports = in_devices.into_iter()
+                                 .filter_map(|dev| {
+                                     context.input_port(dev, BUF_LEN)
+                                            .ok()
+                                 })
+                                 .collect::<Vec<midi::InputPort>>();
+        if in_ports.is_empty() {
+            Err(RunError::NoMidiDeviceAvailable)
+        } else {
+            Ok(MidiReceiver {
+                context: context,
+                in_ports: in_ports,
+                buf_len: BUF_LEN,
+                tx: tx,
+            })
+        }
+    }
+}
+impl MidiReceiver {
     }
 }
 impl Receiver for MidiReceiver {
-    fn receive(&mut self) -> Result<RawControlEvent, RunError> {
-        unimplemented!()
-    }
-
     fn receive_and_send(&mut self) {
         unimplemented!()
     }
