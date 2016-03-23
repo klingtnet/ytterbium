@@ -15,25 +15,20 @@ pub enum RawControlEvent {
 }
 
 pub trait Receiver {
-    fn receive_and_send(&mut self);
+    fn receive_and_send(&mut self, mpsc::Sender<RawControlEvent>);
 }
 
 pub struct OscReceiver {
     socket: UdpSocket,
-    tx: mpsc::Sender<RawControlEvent>,
     buf: [u8; rosc::decoder::MTU],
 }
 impl OscReceiver {
-    pub fn new(ipv4: String,
-               port: u16,
-               tx: mpsc::Sender<RawControlEvent>)
-               -> Result<Self, RunError> {
+    pub fn new(ipv4: String, port: u16) -> Result<Self, RunError> {
         let ipv4_addr = try!(Ipv4Addr::from_str(&ipv4).map_err(|err| RunError::AddrError(err)));
         let socket = try!(UdpSocket::bind((ipv4_addr, port as u16))
                               .map_err(|err| RunError::SocketError(err)));
         Ok(OscReceiver {
             socket: socket,
-            tx: tx, 
             buf: [0u8; rosc::decoder::MTU],
         })
     }
@@ -49,10 +44,10 @@ impl OscReceiver {
     }
 }
 impl Receiver for OscReceiver {
-    fn receive_and_send(&mut self) {
+    fn receive_and_send(&mut self, tx: mpsc::Sender<RawControlEvent>) {
         loop {
             match self.receive() {
-                Ok(raw_event) => self.tx.send(raw_event).unwrap(),
+                Ok(raw_event) => tx.send(raw_event).unwrap(),
                 Err(RunError::OscError(err)) => println!("Could not decode osc packet: {:?}", err),
                 err @ _ => panic!(err),
             }
@@ -64,10 +59,9 @@ pub struct MidiReceiver {
     context: midi::PortMidi,
     in_ports: Vec<midi::InputPort>,
     buf_len: usize,
-    tx: mpsc::Sender<RawControlEvent>,
 }
 impl MidiReceiver {
-    pub fn new(tx: mpsc::Sender<RawControlEvent>) -> Result<Self, RunError> {
+    pub fn new() -> Result<Self, RunError> {
         const BUF_LEN: usize = 1024;
         let context = try!(midi::PortMidi::new().map_err(|err| RunError::MidiError(err)));
         let in_devices = context.devices()
@@ -88,7 +82,6 @@ impl MidiReceiver {
                 context: context,
                 in_ports: in_ports,
                 buf_len: BUF_LEN,
-                tx: tx,
             })
         }
     }
@@ -99,7 +92,7 @@ impl MidiReceiver {
     }
 }
 impl Receiver for MidiReceiver {
-    fn receive_and_send(&mut self) {
+    fn receive_and_send(&mut self, tx: mpsc::Sender<RawControlEvent>) {
         let mut event_buf = Vec::with_capacity(self.buf_len);
         loop {
             for port in &self.in_ports {
@@ -112,7 +105,7 @@ impl Receiver for MidiReceiver {
             }
 
             while let Some(event) = event_buf.pop() {
-                self.tx.send(RawControlEvent::Midi(event)).unwrap();
+                tx.send(RawControlEvent::Midi(event)).unwrap();
             }
 
             thread::sleep(Duration::new(0, 50_000));

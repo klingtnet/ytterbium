@@ -69,21 +69,21 @@ fn run(args: Args) -> Result<(), RunError> {
     let buf = rb::SpscRb::new(4096);
     let (producer, consumer) = (buf.producer(), buf.consumer());
     let (tx_receiver, rx_router) = mpsc::channel();
+    let (tx_osc, tx_midi) = (tx_receiver.clone(), tx_receiver.clone());
     let (tx_router, rx_dsp) = mpsc::channel();
     let mut osc_receiver = try!(OscReceiver::new(args.flag_addr,
-                                                 args.flag_in_port as u16,
-                                                 tx_receiver.clone()));
-    let mut midi_receiver = try!(MidiReceiver::new(tx_receiver.clone()));
+                                                 args.flag_in_port as u16));
+    let mut midi_receiver = try!(MidiReceiver::new());
     let event_router = EventRouter::<RawControlEvent, ControlEvent>::new(rx_router, tx_router);
 
     let osc = thread::Builder::new()
                   .name("osc".to_owned())
-                  .spawn(move || osc_receiver.receive_and_send())
+                  .spawn(move || osc_receiver.receive_and_send(tx_osc))
                   .unwrap();
 
     let _ = thread::Builder::new()
                 .name("midi".to_owned())
-                .spawn(move || midi_receiver.receive_and_send())
+                .spawn(move || midi_receiver.receive_and_send(tx_midi))
                 .unwrap();
 
     let _ = thread::Builder::new()
