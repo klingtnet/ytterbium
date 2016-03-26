@@ -7,6 +7,7 @@ extern crate rb;
 use std::f32::consts::PI as PI32;
 use std::thread;
 use std::sync::mpsc;
+use std::sync::{Arc, Barrier};
 
 use rb::{RB, RbProducer, RbConsumer};
 
@@ -70,6 +71,8 @@ fn run(args: Args) -> Result<(), RunError> {
     let (tx_receiver, rx_router) = mpsc::channel();
     let (tx_osc, tx_midi) = (tx_receiver.clone(), tx_receiver.clone());
     let (tx_router, rx_dsp) = mpsc::channel();
+    let barrier = Arc::new(Barrier::new(2));
+    let (dsp_init, audio_init) = (barrier.clone(), barrier.clone());
     let mut osc_receiver = try!(OscReceiver::new(args.flag_addr,
                                                  args.flag_in_port as u16));
     let mut midi_receiver = try!(MidiReceiver::new());
@@ -100,6 +103,7 @@ fn run(args: Args) -> Result<(), RunError> {
                     let mut n = 0;
                     let mut a = 1.0;
 
+                    dsp_init.wait();
                     loop {
                         // TODO: busy wait loop, should be not so bad when the actual dsp
                         // calculations take place
@@ -151,6 +155,7 @@ fn run(args: Args) -> Result<(), RunError> {
     out.register_underflow_callback(|out: rsoundio::OutStream| {
          println!("Underflow in {} occured!", out.name().unwrap())
     });
+    audio_init.wait();
     out.open().unwrap();
     match out.latency() {
         Ok(latency) => println!("SW-latency: {}", latency),
