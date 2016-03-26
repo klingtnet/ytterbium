@@ -141,9 +141,11 @@ fn run(args: Args) -> Result<(), RunError> {
                                  min_frame_count: u32,
                                  max_frame_count: u32| {
         // TODO: pulseaudio has problems with buffer sizes smaller than 2048
+        const LEN: usize = 2048;
+        let len = ::std::cmp::min(LEN, max_frame_count as usize);
         let mut data = vec![0.0f32; 2048];
-        let cnt = consumer.read_blocking(&mut data).unwrap();
-        let frames = vec![data.clone(), data.clone()];
+        let cnt = consumer.read_blocking(&mut data[..len]).unwrap();
+        let frames = vec![data[..len].iter().cloned().collect(), data[..len].iter().cloned().collect()];
         out.write_stream_f32(min_frame_count, &frames).unwrap();
     });
     out.register_underflow_callback(|out: rsoundio::OutStream| {
