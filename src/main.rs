@@ -6,7 +6,7 @@ extern crate rb;
 
 use std::f32::consts::PI as PI32;
 use std::thread;
-use std::sync::mpsc; // multiple producer/single consumer
+use std::sync::mpsc;
 
 use rb::{RB, RbProducer, RbConsumer};
 
@@ -17,7 +17,6 @@ mod event;
 use event::receiver::{Receiver, OscReceiver, MidiReceiver, RawControlEvent};
 use event::router::{EventRouter, ControlEvent};
 
-/// `r#"..."` are so called *raw* strings (don't need to be escaped)
 const USAGE: &'static str = r#"
 Ytterbium OSC controllable synthesizer
 
