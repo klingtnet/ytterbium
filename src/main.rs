@@ -94,8 +94,12 @@ fn run(args: Args) -> Result<(), RunError> {
     let _ = thread::Builder::new()
                 .name("dsp".to_owned())
                 .spawn(move || {
-                    let w = (2.0 * PI32 * 440.0) / 48_000.0;
+                    const TUNE_FREQ: f32 = 440.0;
+                    const SR: f32 = 48000.0;
+                    let mut f = 440f32;
+                    let mut w = (2.0 * PI32 * f) / SR;
                     let mut n = 0;
+                    let mut a = 1.0;
 
                     loop {
                         // TODO: busy wait loop, should be not so bad when the actual dsp
@@ -103,14 +107,21 @@ fn run(args: Args) -> Result<(), RunError> {
 
                         // TODO: dsp and audio output are going to need shared audio buffer
                         if let Ok(msg) = rx_dsp.try_recv() {
-
+                            match msg {
+                                ControlEvent::NoteOn{key, velocity} => {
+                                    a = velocity;
+                                    f = 2.0f32.powf((key as isize - 69) as f32/12.0) * TUNE_FREQ;
+                                    w = (2.0 * PI32 * f) / SR;
+                                },
+                                _ => ()
+                            }
                         }
-                        let data = (0..512)
+                        let data = (0..128)
                                        .map(|x| {
-                                           n = (n + 1) % 110;
-                                           (w * n as f32).sin() * 0.5
+                                           (w * (x + n) as f32).sin() * a
                                        })
                                        .collect::<Vec<f32>>();
+                        n += 128;
                         let cnt = producer.write_blocking(&data).unwrap();
                     }
                 })

@@ -1,17 +1,28 @@
 extern crate rosc;
-extern crate portmidi as midi;
+extern crate portmidi;
 
 use std::sync::mpsc;
 use rosc::{OscPacket, OscType};
 
+use event::midi::MidiEvent;
 use event::receiver::RawControlEvent;
 
 #[derive(Debug)]
 pub enum ControlEvent {
     Unknown,
+    Unsupported,
     NoEvent,
-    NoteOn,
-    NoteOff,
+    NoteOn {
+        key: u32,
+        velocity: f32,
+    },
+    NoteOff {
+        key: u32,
+        velocity: f32,
+    },
+    Start,
+    Stop,
+    Continue,
 }
 impl From<RawControlEvent> for ControlEvent {
     fn from(raw: RawControlEvent) -> ControlEvent {
@@ -70,7 +81,10 @@ pub fn translate_osc(packet: rosc::OscPacket) -> ControlEvent {
     }
 }
 
-pub fn translate_midi(event: midi::MidiEvent) -> ControlEvent {
-    // TODO: Ignore midi messages until portmidi-rs is refactored
-    ControlEvent::Unknown
+pub fn translate_midi(event: portmidi::MidiEvent) -> ControlEvent {
+    match MidiEvent::from(event) {
+        MidiEvent::NoteOn{key, velocity, ..} => ControlEvent::NoteOn{key: key, velocity: velocity},
+        MidiEvent::NoteOff{key, velocity, ..} => ControlEvent::NoteOff{key:key, velocity: velocity},
+        _ => ControlEvent::Unsupported,
+    }
 }
