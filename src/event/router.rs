@@ -1,7 +1,7 @@
 extern crate rosc;
 extern crate portmidi as midi;
 
-use std::sync::mpsc; // multiple producer/single consumer
+use std::sync::mpsc;
 use rosc::{OscPacket, OscType};
 
 use event::receiver::RawControlEvent;
