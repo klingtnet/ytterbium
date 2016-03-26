@@ -94,6 +94,7 @@ impl MidiReceiver {
 impl Receiver for MidiReceiver {
     fn receive_and_send(&mut self, tx: mpsc::Sender<RawControlEvent>) {
         let mut event_buf = Vec::with_capacity(self.buf_len);
+        let timeout = Duration::from_millis(20);
         loop {
             for port in &self.in_ports {
                 match self.receive(port) {
@@ -108,7 +109,7 @@ impl Receiver for MidiReceiver {
                 tx.send(RawControlEvent::Midi(event)).unwrap();
             }
 
-            thread::sleep(Duration::new(0, 50_000));
+            thread::sleep(timeout);
         }
     }
 }
