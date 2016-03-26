@@ -150,6 +150,10 @@ fn run(args: Args) -> Result<(), RunError> {
          println!("Underflow in {} occured!", out.name().unwrap())
     });
     out.open().unwrap();
+    match out.latency() {
+        Ok(latency) => println!("SW-latency: {}", latency),
+        Err(err) => println!("err: {}", err),
+    }
     out.start().unwrap();
     osc.join();
     Ok(())
