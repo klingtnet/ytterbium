@@ -73,10 +73,9 @@ fn run(args: Args) -> Result<(), RunError> {
     let (tx_receiver, rx_router) = mpsc::channel();
     let (tx_osc, tx_midi) = (tx_receiver.clone(), tx_receiver.clone());
     let (tx_router, rx_dsp) = mpsc::channel();
-    let barrier = Arc::new(Barrier::new(2));
-    let (dsp_init, audio_init) = (barrier.clone(), barrier.clone());
-    let mut osc_receiver = try!(OscReceiver::new(args.flag_addr,
-                                                 args.flag_in_port as u16));
+    let dsp_init = Arc::new(Barrier::new(1));
+    let audio_init = dsp_init.clone();
+    let mut osc_receiver = try!(OscReceiver::new(args.flag_addr, args.flag_in_port as u16));
     let mut midi_receiver = try!(MidiReceiver::new());
     let event_router = EventRouter::<RawControlEvent, ControlEvent>::new(rx_router, tx_router);
     let mut handles = HashMap::with_capacity(5);
