@@ -10,7 +10,7 @@ pub enum RunError {
     Unknown,
     Unimplemented,
     AddrError(AddrParseError),
-    SocketError(io::Error),
+    IoError(io::Error),
     OscError(rosc::OscError),
     MidiError(midi::Error),
     NoMidiDeviceAvailable,
