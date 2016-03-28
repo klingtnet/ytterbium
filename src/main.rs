@@ -75,8 +75,6 @@ fn run(args: Args) -> Result<(), RunError> {
     let (tx_router, rx_dsp) = mpsc::channel();
     let dsp_init = Arc::new(Barrier::new(1));
     let audio_init = dsp_init.clone();
-    let mut osc_receiver = try!(OscReceiver::new(args.flag_addr, args.flag_in_port as u16));
-    let mut midi_receiver = try!(MidiReceiver::new());
     let event_router = EventRouter::<RawControlEvent, ControlEvent>::new(rx_router, tx_router);
     let mut handles = HashMap::with_capacity(5);
     let quit = Arc::new(AtomicBool::new(false));
@@ -85,13 +83,21 @@ fn run(args: Args) -> Result<(), RunError> {
     handles.insert("osc",
                    thread::Builder::new()
                        .name("osc".to_owned())
-                       .spawn(move || osc_receiver.receive_and_send(tx_osc))
+                       .spawn(move || {
+                           let mut osc_receiver = OscReceiver::new(args.flag_addr,
+                                                                   args.flag_in_port as u16)
+                                                      .unwrap();
+                           osc_receiver.receive_and_send(tx_osc)
+                       })
                        .unwrap());
 
     handles.insert("midi",
                    thread::Builder::new()
                        .name("midi".to_owned())
-                       .spawn(move || midi_receiver.receive_and_send(tx_midi))
+                       .spawn(move || {
+                           let mut midi_receiver = MidiReceiver::new().unwrap();
+                           midi_receiver.receive_and_send(tx_midi)
+                       })
                        .unwrap());
 
     handles.insert("router",
