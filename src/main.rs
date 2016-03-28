@@ -117,10 +117,6 @@ fn run(args: Args) -> Result<(), RunError> {
                                if quit_dsp.load(Ordering::Relaxed) {
                                    break;
                                }
-                               // TODO: busy wait loop, should be not so bad when the actual dsp
-                               // calculations take place
-
-                               // TODO: dsp and audio output are going to need shared audio buffer
                                if let Ok(msg) = rx_dsp.try_recv() {
                                    match msg {
                                        ControlEvent::NoteOn{key, velocity} => {
@@ -160,7 +156,6 @@ fn run(args: Args) -> Result<(), RunError> {
                            out.register_write_callback(|out: rsoundio::OutStream,
                                                         min_frame_count: u32,
                                                         max_frame_count: u32| {
-                               // TODO: pulseaudio has problems with buffer sizes smaller than 2048
                                const LEN: usize = 2048;
                                // TODO: use a length that is not smaller than 2048 for pulseaudio
                                let len = ::std::cmp::min(LEN, max_frame_count as usize);
