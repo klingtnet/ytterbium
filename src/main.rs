@@ -4,6 +4,7 @@ extern crate rustc_serialize;
 extern crate rsoundio;
 extern crate rb;
 
+use std::collections::HashMap;
 use std::f32::consts::PI as PI32;
 use std::thread;
 use std::sync::mpsc;
@@ -77,23 +78,28 @@ fn run(args: Args) -> Result<(), RunError> {
                                                  args.flag_in_port as u16));
     let mut midi_receiver = try!(MidiReceiver::new());
     let event_router = EventRouter::<RawControlEvent, ControlEvent>::new(rx_router, tx_router);
+    let mut handles = HashMap::with_capacity(5);
 
-    let osc = thread::Builder::new()
+    handles.insert("osc",
+                   thread::Builder::new()
                   .name("osc".to_owned())
                   .spawn(move || osc_receiver.receive_and_send(tx_osc))
-                  .unwrap();
+                  .unwrap());
 
-    let _ = thread::Builder::new()
+    handles.insert("midi",
+                   thread::Builder::new()
                 .name("midi".to_owned())
                 .spawn(move || midi_receiver.receive_and_send(tx_midi))
-                .unwrap();
+                .unwrap());
 
-    let _ = thread::Builder::new()
+    handles.insert("router",
+                   thread::Builder::new()
                 .name("router".to_owned())
                 .spawn(move || event_router.route())
-                .unwrap();
+                .unwrap());
 
-    let _ = thread::Builder::new()
+    handles.insert("dsp",
+                   thread::Builder::new()
                 .name("dsp".to_owned())
                 .spawn(move || {
                     const TUNE_FREQ: f32 = 440.0;
@@ -128,7 +134,7 @@ fn run(args: Args) -> Result<(), RunError> {
                         let cnt = producer.write_blocking(&data).unwrap();
                     }
                 })
-                .unwrap();
+                .unwrap());
 
     let mut sio = rsoundio::SoundIo::new();
     sio.set_name("ytterbium").unwrap();
@@ -162,6 +168,10 @@ fn run(args: Args) -> Result<(), RunError> {
         Err(err) => println!("err: {}", err),
     }
     out.start().unwrap();
-    osc.join();
+    for handle_key in handles.keys() {
+        if let Some(handle) = handles.remove(handle_key) {
+            handle.join().unwrap();
+        }
+    }
     Ok(())
 }
