@@ -9,6 +9,7 @@ use std::f32::consts::PI as PI32;
 use std::thread;
 use std::sync::mpsc;
 use std::sync::{Arc, Barrier};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use rb::{RB, RbProducer, RbConsumer};
 
@@ -79,6 +80,8 @@ fn run(args: Args) -> Result<(), RunError> {
     let mut midi_receiver = try!(MidiReceiver::new());
     let event_router = EventRouter::<RawControlEvent, ControlEvent>::new(rx_router, tx_router);
     let mut handles = HashMap::with_capacity(5);
+    let quit = Arc::new(AtomicBool::new(false));
+    let quit_dsp = quit.clone();
 
     handles.insert("osc",
                    thread::Builder::new()
@@ -100,41 +103,43 @@ fn run(args: Args) -> Result<(), RunError> {
 
     handles.insert("dsp",
                    thread::Builder::new()
-                .name("dsp".to_owned())
-                .spawn(move || {
-                    const TUNE_FREQ: f32 = 440.0;
-                    const SR: f32 = 48000.0;
-                    let mut f = 440f32;
-                    let mut w = (2.0 * PI32 * f) / SR;
-                    let mut n = 0;
-                    let mut a = 1.0;
+                       .name("dsp".to_owned())
+                       .spawn(move || {
+                           const TUNE_FREQ: f32 = 440.0;
+                           const SR: f32 = 48000.0;
+                           let mut f = 440f32;
+                           let mut w = (2.0 * PI32 * f) / SR;
+                           let mut n = 0;
+                           let mut a = 1.0;
 
-                    dsp_init.wait();
-                    loop {
-                        // TODO: busy wait loop, should be not so bad when the actual dsp
-                        // calculations take place
+                           dsp_init.wait();
+                           loop {
+                               if quit_dsp.load(Ordering::Relaxed) {
+                                   break;
+                               }
+                               // TODO: busy wait loop, should be not so bad when the actual dsp
+                               // calculations take place
 
-                        // TODO: dsp and audio output are going to need shared audio buffer
-                        if let Ok(msg) = rx_dsp.try_recv() {
-                            match msg {
-                                ControlEvent::NoteOn{key, velocity} => {
-                                    a = velocity;
-                                    f = 2.0f32.powf((key as isize - 69) as f32/12.0) * TUNE_FREQ;
-                                    w = (2.0 * PI32 * f) / SR;
-                                },
-                                _ => ()
-                            }
-                        }
-                        let data = (0..128)
-                                       .map(|x| {
-                                           (w * (x + n) as f32).sin() * a
-                                       })
-                                       .collect::<Vec<f32>>();
-                        n += 128;
-                        let cnt = producer.write_blocking(&data).unwrap();
-                    }
-                })
-                .unwrap());
+                               // TODO: dsp and audio output are going to need shared audio buffer
+                               if let Ok(msg) = rx_dsp.try_recv() {
+                                   match msg {
+                                       ControlEvent::NoteOn{key, velocity} => {
+                                           a = velocity;
+                                           f = 2.0f32.powf((key as isize - 69) as f32 / 12.0) *
+                                               TUNE_FREQ;
+                                           w = (2.0 * PI32 * f) / SR;
+                                       }
+                                       _ => (),
+                                   }
+                               }
+                               let data = (0..128)
+                                              .map(|x| (w * (x + n) as f32).sin() * a)
+                                              .collect::<Vec<f32>>();
+                               n += 128;
+                               let cnt = producer.write_blocking(&data).unwrap();
+                           }
+                       })
+                       .unwrap());
 
     handles.insert("output",
                    thread::Builder::new()
@@ -183,12 +188,27 @@ fn run(args: Args) -> Result<(), RunError> {
                        })
                        .unwrap());
 
+    // Wait until EOF is received.
+    try!(read_eof());
+    quit.store(true, Ordering::Relaxed);
+    if let Some(handle) = handles.remove("dsp") {
+        handle.join().unwrap();
     }
-    out.start().unwrap();
-    for handle_key in handles.keys() {
-        if let Some(handle) = handles.remove(handle_key) {
-            handle.join().unwrap();
-        }
+    if let Some(handle) = handles.remove("output") {
+        handle.thread().unpark();
+        handle.join().unwrap();
+    }
+    Ok(())
+}
+
+fn read_eof() -> Result<(), RunError> {
+    let mut buffer = String::new();
+    let mut eof = false;
+    while !eof {
+        // Read from `stdin` until Ctrl-D (`EOF`) is received.
+        eof = try!(::std::io::stdin()
+                       .read_line(&mut buffer)
+                       .map_err(|err| RunError::IoError(err))) == 0;
     }
     Ok(())
 }
