@@ -136,36 +136,53 @@ fn run(args: Args) -> Result<(), RunError> {
                 })
                 .unwrap());
 
-    let mut sio = rsoundio::SoundIo::new();
-    sio.set_name("ytterbium").unwrap();
-    // connect to default backend
-    sio.connect().unwrap();
-    println!("Connected to: {}", sio.current_backend().unwrap());
-    sio.flush_events();
-    let dev = sio.default_output_device().unwrap();
-    let mut out = dev.create_outstream().unwrap();
-    out.set_name("debug").ok();
-    out.set_format(rsoundio::SioFormat::Float32LE).unwrap();
-    println!("Format: {}", out.format().unwrap());
-    out.register_write_callback(|out: rsoundio::OutStream,
-                                 min_frame_count: u32,
-                                 max_frame_count: u32| {
-        // TODO: pulseaudio has problems with buffer sizes smaller than 2048
-        const LEN: usize = 2048;
-        let len = ::std::cmp::min(LEN, max_frame_count as usize);
-        let mut data = vec![0.0f32; 2048];
-        let cnt = consumer.read_blocking(&mut data[..len]).unwrap();
-        let frames = vec![data[..len].iter().cloned().collect(), data[..len].iter().cloned().collect()];
-        out.write_stream_f32(min_frame_count, &frames).unwrap();
-    });
-    out.register_underflow_callback(|out: rsoundio::OutStream| {
-         println!("Underflow in {} occured!", out.name().unwrap())
-    });
-    audio_init.wait();
-    out.open().unwrap();
-    match out.latency() {
-        Ok(latency) => println!("SW-latency: {}", latency),
-        Err(err) => println!("err: {}", err),
+    handles.insert("output",
+                   thread::Builder::new()
+                       .name("output".to_owned())
+                       .spawn(move || {
+                           let mut sio = rsoundio::SoundIo::new();
+                           sio.set_name("ytterbium").unwrap();
+                           // connect to default backend
+                           sio.connect().unwrap();
+                           println!("Connected to: {}", sio.current_backend().unwrap());
+                           sio.flush_events();
+                           let dev = sio.default_output_device().unwrap();
+                           let mut out = dev.create_outstream().unwrap();
+                           out.set_name("debug").ok();
+                           // panics when using jack backend
+                           out.set_format(rsoundio::SioFormat::Float32LE).unwrap();
+                           println!("Format: {}", out.format().unwrap());
+                           out.register_write_callback(|out: rsoundio::OutStream,
+                                                        min_frame_count: u32,
+                                                        max_frame_count: u32| {
+                               // TODO: pulseaudio has problems with buffer sizes smaller than 2048
+                               const LEN: usize = 2048;
+                               // TODO: use a length that is not smaller than 2048 for pulseaudio
+                               let len = ::std::cmp::min(LEN, max_frame_count as usize);
+                               let mut data = vec![0.0f32; LEN];
+                               let cnt = consumer.read_blocking(&mut data[..len]).unwrap();
+                               let frames = vec![data[..len].iter().cloned().collect(),
+                                                 data[..len].iter().cloned().collect()];
+                               out.write_stream_f32(min_frame_count, &frames).unwrap();
+                           });
+                           out.register_underflow_callback(|out: rsoundio::OutStream| {
+                               println!("Underflow in {} occured!", out.name().unwrap())
+                           });
+                           audio_init.wait();
+                           out.open().unwrap();
+                           match out.latency() {
+                               Ok(latency) => println!("SW-latency: {}", latency),
+                               Err(err) => println!("err: {}", err),
+                           }
+                           out.start().unwrap();
+                           // Get handle of the current thread and park it.
+                           // The thread will be unparked when the application quits.
+                           thread::park();
+                           println!("Disconnecting audio backend.");
+                           sio.disconnect();
+                       })
+                       .unwrap());
+
     }
     out.start().unwrap();
     for handle_key in handles.keys() {
