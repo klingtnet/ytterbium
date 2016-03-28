@@ -82,21 +82,21 @@ fn run(args: Args) -> Result<(), RunError> {
 
     handles.insert("osc",
                    thread::Builder::new()
-                  .name("osc".to_owned())
-                  .spawn(move || osc_receiver.receive_and_send(tx_osc))
-                  .unwrap());
+                       .name("osc".to_owned())
+                       .spawn(move || osc_receiver.receive_and_send(tx_osc))
+                       .unwrap());
 
     handles.insert("midi",
                    thread::Builder::new()
-                .name("midi".to_owned())
-                .spawn(move || midi_receiver.receive_and_send(tx_midi))
-                .unwrap());
+                       .name("midi".to_owned())
+                       .spawn(move || midi_receiver.receive_and_send(tx_midi))
+                       .unwrap());
 
     handles.insert("router",
                    thread::Builder::new()
-                .name("router".to_owned())
-                .spawn(move || event_router.route())
-                .unwrap());
+                       .name("router".to_owned())
+                       .spawn(move || event_router.route())
+                       .unwrap());
 
     handles.insert("dsp",
                    thread::Builder::new()
