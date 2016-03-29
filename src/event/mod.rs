@@ -25,9 +25,6 @@ pub enum ControlEvent {
         key: u32,
         velocity: f32,
     },
-    Start,
-    Stop,
-    Continue,
 }
 impl From<RawControlEvent> for ControlEvent {
     fn from(raw: RawControlEvent) -> ControlEvent {
