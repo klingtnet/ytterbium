@@ -6,7 +6,7 @@ use std::sync::mpsc;
 use std::str::FromStr;
 
 use receiver::Receiver;
-use event::{ControlEvent, RawControlEvent};
+use event::RawControlEvent;
 
 pub struct OscReceiver {
     socket: UdpSocket,

@@ -4,7 +4,7 @@ extern crate portmidi;
 pub mod router;
 
 use receiver::MidiEvent;
-use rosc::{OscPacket, OscType};
+use rosc::OscPacket;
 
 #[derive(Debug)]
 pub enum RawControlEvent {

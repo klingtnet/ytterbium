@@ -3,7 +3,6 @@ extern crate portmidi;
 use errors::RunError;
 use std::sync::mpsc;
 use std::time::Duration;
-use std::str::FromStr;
 use std::thread;
 
 use receiver::Receiver;

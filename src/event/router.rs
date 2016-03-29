@@ -3,9 +3,6 @@ extern crate portmidi;
 
 use std::sync::mpsc;
 
-use receiver::MidiEvent;
-use event::{ControlEvent, RawControlEvent};
-
 pub struct EventRouter<R, S: From<R>> {
     rx: mpsc::Receiver<R>,
     tx: mpsc::Sender<S>,
