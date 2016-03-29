@@ -1,5 +1,74 @@
 extern crate portmidi;
 
+use errors::RunError;
+use std::sync::mpsc;
+use std::time::Duration;
+use std::str::FromStr;
+use std::thread;
+
+use receiver::Receiver;
+use event::{ControlEvent, RawControlEvent};
+
+pub struct MidiReceiver {
+    context: portmidi::PortMidi,
+    in_ports: Vec<portmidi::InputPort>,
+    buf_len: usize,
+}
+impl MidiReceiver {
+    pub fn new() -> Result<Self, RunError> {
+        const BUF_LEN: usize = 1024;
+        let context = try!(portmidi::PortMidi::new().map_err(|err| RunError::MidiError(err)));
+        let in_devices = context.devices()
+                                .unwrap()
+                                .into_iter()
+                                .filter(|dev| dev.is_input())
+                                .collect::<Vec<portmidi::DeviceInfo>>();
+        let in_ports = in_devices.into_iter()
+                                 .filter_map(|dev| {
+                                     context.input_port(dev, BUF_LEN)
+                                            .ok()
+                                 })
+                                 .collect::<Vec<portmidi::InputPort>>();
+        if in_ports.is_empty() {
+            Err(RunError::NoMidiDeviceAvailable)
+        } else {
+            Ok(MidiReceiver {
+                context: context,
+                in_ports: in_ports,
+                buf_len: BUF_LEN,
+            })
+        }
+    }
+}
+impl MidiReceiver {
+    fn receive(&self, port: &portmidi::InputPort) -> Result<Option<Vec<portmidi::MidiEvent>>, RunError> {
+        port.read_n(self.buf_len).map_err(|err| RunError::MidiError(err))
+    }
+}
+impl Receiver for MidiReceiver {
+    fn receive_and_send(&mut self, tx: mpsc::Sender<RawControlEvent>) {
+        let mut event_buf = Vec::with_capacity(self.buf_len);
+        let timeout = Duration::from_millis(20);
+        loop {
+            for port in &self.in_ports {
+                match self.receive(port) {
+                    Ok(Some(mut events)) => event_buf.append(&mut events),
+                    Ok(_) => (),
+                    Err(RunError::MidiError(err)) => println!("receive_and_send) Error: {:?}", err),
+                    Err(err) => panic!(err),
+                }
+            }
+
+            event_buf.sort_by_key(|e| e.timestamp);
+            while let Some(event) = event_buf.pop() {
+                tx.send(RawControlEvent::Midi(event)).unwrap();
+            }
+
+            thread::sleep(timeout);
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum MidiEvent {
     Unknown,

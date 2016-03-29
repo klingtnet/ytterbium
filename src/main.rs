@@ -17,8 +17,10 @@ mod errors;
 use errors::RunError;
 
 mod event;
-use event::receiver::{Receiver, OscReceiver, MidiReceiver, RawControlEvent};
-use event::router::{EventRouter, ControlEvent};
+mod receiver;
+use receiver::{Receiver, OscReceiver, MidiReceiver};
+use event::{ControlEvent, RawControlEvent};
+use event::router::EventRouter;
 
 const USAGE: &'static str = r#"
 Ytterbium OSC controllable synthesizer
