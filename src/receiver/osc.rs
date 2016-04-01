@@ -1,7 +1,7 @@
 extern crate rosc;
 
 use errors::RunError;
-use std::net::{UdpSocket, Ipv4Addr};
+use std::net::{UdpSocket, SocketAddr};
 use std::sync::mpsc;
 use std::str::FromStr;
 
@@ -13,10 +13,8 @@ pub struct OscReceiver {
     buf: [u8; rosc::decoder::MTU],
 }
 impl OscReceiver {
-    pub fn new(ipv4: String, port: u16) -> Result<Self, RunError> {
-        let ipv4_addr = try!(Ipv4Addr::from_str(&ipv4).map_err(|err| RunError::AddrError(err)));
-        let socket = try!(UdpSocket::bind((ipv4_addr, port as u16))
-                              .map_err(|err| RunError::IoError(err)));
+    pub fn new(addr: SocketAddr) -> Result<Self, RunError> {
+        let socket = try!(UdpSocket::bind(addr).map_err(|err| RunError::IoError(err)));
         Ok(OscReceiver {
             socket: socket,
             buf: [0u8; rosc::decoder::MTU],

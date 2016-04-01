@@ -1,8 +1,8 @@
 extern crate rosc;
-extern crate docopt;
-extern crate rustc_serialize;
 extern crate rsoundio;
 extern crate rb;
+
+extern crate clap;
 
 use std::collections::HashMap;
 use std::f32::consts::PI as PI32;
@@ -10,6 +10,10 @@ use std::thread;
 use std::sync::mpsc;
 use std::sync::{Arc, Barrier};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::str::FromStr;
+use std::net::{IpAddr, SocketAddr};
+use std::process;
+use std::io::Write;
 
 use rb::{RB, RbProducer, RbConsumer};
 
@@ -22,51 +26,96 @@ use receiver::{Receiver, OscReceiver, MidiReceiver};
 use event::{ControlEvent, RawControlEvent};
 use event::router::EventRouter;
 
-const USAGE: &'static str = r#"
-Ytterbium OSC controllable synthesizer
-
-Usage:
-    ytterbium [--in-port=<port> --out-port=<port> --addr=<addr> --sample-rate=<sr>]
-    ytterbium (-h | --help | --version)
-
-Options:
-    --in-port=<port>        OSC listening port. [default: 9090]
-    --out-port=<port>       OSC listening port. [default: 9091]
-    --addr=<addr>           Network interface to listen on. [default: 0.0.0.0]
-    --sample-rate=<sr>      Playback sample rate. [default: 48000]
-    -v --voices=<voices>    Number of voices [default: 1]
-    -h --help               Show this help page.
-    --debug                 Print debugging information.
-    --version               Print the version number and exit.
-"#;
-
-#[derive(Debug, RustcDecodable)]
-struct Args {
-    flag_in_port: usize,
-    flag_out_port: usize,
-    flag_addr: String,
-    flag_sample_rate: usize,
-    flag_voices: usize,
-    flag_help: bool,
-    flag_debug: bool,
-    flag_version: bool,
-}
-
 const MAX_VOICES: usize = 24;
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
+macro_rules! printerr(
+    ($($arg:tt)*) => { {
+        let r = writeln!(&mut ::std::io::stderr(), $($arg)*);
+        r.expect("could not write to stderr");
+    } }
+);
+
+
+struct Args {
+    socket_addr_in: SocketAddr,
+    socket_addr_out: SocketAddr,
+    sample_rate: u32,
+}
+
+/// Parses and validates the command line arguments.
+/// If an error occurs a message is written to stderr and
+/// the program exits.
+fn get_args() -> Args {
+    let address_arg = clap::Arg::with_name("address")
+                          .long("address")
+                          .short("a")
+                          .required(true)
+                          .takes_value(true)
+                          .value_name("ip-address")
+                          .default_value("0.0.0.0")
+                          .help("Address to listen on for OSC messages.");
+    let ports_arg = clap::Arg::with_name("ports")
+                        .long("ports")
+                        .short("p")
+                        .required(true)
+                        .takes_value(true)
+                        .number_of_values(2)
+                        .value_names(&["in", "out"])
+                        .help("OSC listening and send port.");
+    let sample_rate_arg = clap::Arg::with_name("sample-rate")
+                              .long("sample-rate")
+                              .short("s")
+                              .takes_value(true)
+                              .value_name("sample-rate")
+                              .default_value("48000")
+                              .possible_values(&["44100", "48000", "88200", "96000"])
+                              .help("Playback sample-rate");
+    let args = clap::App::new("ytterbium")
+                   .version(VERSION)
+                   .author("Andreas Linz <klingt.net@gmail.com>")
+                   .arg(address_arg)
+                   .arg(ports_arg)
+                   .arg(sample_rate_arg)
+                   .get_matches();
+
+    let sample_rate = args.value_of("sample-rate")
+                          .map_or(48_000, |str_val| str_val.parse::<u32>().unwrap());
+    let ip_addr = match IpAddr::from_str(args.value_of("address").unwrap()) {
+        Ok(val) => val,
+        Err(err) => {
+            printerr!("Bad ip address: {}", err);
+            process::exit(1)
+        }
+    };
+    let ports = args.values_of("ports")
+                    .unwrap()
+                    .map(|port| {
+                        match port.parse::<u16>() {
+                            Ok(val) => val,
+                            Err(err) => {
+                                printerr!("Bad port, must be in range [0, 65535]: {}", err);
+                                process::exit(1)
+                            }
+                        }
+                    })
+                    .collect::<Vec<u16>>();
+    let (socket_addr_in, socket_addr_out) = (SocketAddr::new(ip_addr, ports[0]),
+                                             SocketAddr::new(ip_addr, ports[1]));
+
+    Args {
+        socket_addr_in: socket_addr_in,
+        socket_addr_out: socket_addr_out,
+        sample_rate: sample_rate,
+    }
+}
+
 fn main() {
-    let argv: Vec<String> = ::std::env::args().collect();
-    let args: Args = docopt::Docopt::new(USAGE)
-                         .and_then(|docopt| {
-                             let version = Some(format!("ytterbium {}", VERSION));
-                             docopt.version(version)
-                                   .argv(argv.into_iter())
-                                   .decode::<Args>()
-                         })
-                         .unwrap_or_else(|err| err.exit());
-    run(args).map_err(|err| println!("{:?}", err));
-    println!("Exiting ...");
+    let args = get_args();
+    run(args).map_err(|err| {
+        printerr!("{:?}", err);
+        process::exit(1)
+    });
 }
 
 fn run(args: Args) -> Result<(), RunError> {
@@ -86,9 +135,7 @@ fn run(args: Args) -> Result<(), RunError> {
                    thread::Builder::new()
                        .name("osc".to_owned())
                        .spawn(move || {
-                           let mut osc_receiver = OscReceiver::new(args.flag_addr,
-                                                                   args.flag_in_port as u16)
-                                                      .unwrap();
+                           let mut osc_receiver = OscReceiver::new(args.socket_addr_in).unwrap();
                            osc_receiver.receive_and_send(tx_osc)
                        })
                        .unwrap());
