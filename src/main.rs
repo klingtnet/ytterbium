@@ -134,11 +134,11 @@ fn run(args: Args) -> Result<(), RunError> {
                    thread::Builder::new()
                        .name("osc".to_owned())
                        .spawn({
-                           let tx_osc = tx_receiver.clone();
+                           let tx = tx_receiver.clone();
                            move || {
                                let mut osc_receiver = OscReceiver::new(args.socket_addr_in)
                                                           .unwrap();
-                               osc_receiver.receive_and_send(tx_osc)
+                               osc_receiver.receive_and_send(tx)
                            }
                        })
                        .unwrap());
@@ -147,10 +147,10 @@ fn run(args: Args) -> Result<(), RunError> {
                    thread::Builder::new()
                        .name("midi".to_owned())
                        .spawn({
-                           let tx_midi = tx_receiver.clone();
+                           let tx = tx_receiver.clone();
                            move || {
                                let mut midi_receiver = MidiReceiver::new().unwrap();
-                               midi_receiver.receive_and_send(tx_midi)
+                               midi_receiver.receive_and_send(tx)
                            }
                        })
                        .unwrap());
