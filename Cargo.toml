@@ -12,8 +12,6 @@ keywords = ["audio", "synth", "synthesizer", "osc", "instrument"]
 readme = "README.md"
 
 [dependencies]
-docopt = "^0.6"
-rustc-serialize = "^0.3"
 rosc = "^0.1"
 portmidi = "^0.2.2"
 rsoundio = "^0.1"
