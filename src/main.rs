@@ -164,39 +164,40 @@ fn run(args: Args) -> Result<(), RunError> {
                    thread::Builder::new()
                        .name("dsp".to_owned())
                        .spawn({
-                       let init = audio_init.clone();
-                       let quit = quit.clone();
-                       move || {
-                           const TUNE_FREQ: f32 = 440.0;
-                           const SR: f32 = 48000.0;
-                           let mut f = 440f32;
-                           let mut w = (2.0 * PI32 * f) / SR;
-                           let mut n = 0;
-                           let mut a = 1.0;
+                           let init = audio_init.clone();
+                           let quit = quit.clone();
+                           move || {
+                               const TUNE_FREQ: f32 = 440.0;
+                               const SR: f32 = 48000.0;
+                               let mut f = 440f32;
+                               let mut w = (2.0 * PI32 * f) / SR;
+                               let mut n = 0;
+                               let mut a = 1.0;
 
-                           init.wait();
-                           loop {
-                               if quit.load(Ordering::Relaxed) {
-                                   break;
-                               }
-                               if let Ok(msg) = rx_dsp.try_recv() {
-                                   match msg {
-                                       ControlEvent::NoteOn{key, velocity} => {
-                                           a = velocity;
-                                           f = 2.0f32.powf((key as isize - 69) as f32 / 12.0) *
-                                               TUNE_FREQ;
-                                           w = (2.0 * PI32 * f) / SR;
-                                       }
-                                       _ => (),
+                               init.wait();
+                               loop {
+                                   if quit.load(Ordering::Relaxed) {
+                                       break;
                                    }
+                                   if let Ok(msg) = rx_dsp.try_recv() {
+                                       match msg {
+                                           ControlEvent::NoteOn{key, velocity} => {
+                                               a = velocity;
+                                               f = 2.0f32.powf((key as isize - 69) as f32 / 12.0) *
+                                                   TUNE_FREQ;
+                                               w = (2.0 * PI32 * f) / SR;
+                                           }
+                                           _ => (),
+                                       }
+                                   }
+                                   let data = (0..128)
+                                                  .map(|x| (w * (x + n) as f32).sin() * a)
+                                                  .collect::<Vec<f32>>();
+                                   n += 128;
+                                   let cnt = producer.write_blocking(&data).unwrap();
                                }
-                               let data = (0..128)
-                                              .map(|x| (w * (x + n) as f32).sin() * a)
-                                              .collect::<Vec<f32>>();
-                               n += 128;
-                               let cnt = producer.write_blocking(&data).unwrap();
                            }
-                       }})
+                       })
                        .unwrap());
 
     handles.insert("output",
