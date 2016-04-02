@@ -123,8 +123,7 @@ fn run(args: Args) -> Result<(), RunError> {
     let (producer, consumer) = (buf.producer(), buf.consumer());
     let (tx_receiver, rx_router) = mpsc::channel();
     let (tx_router, rx_dsp) = mpsc::channel();
-    let dsp_init = Arc::new(Barrier::new(1));
-    let audio_init = dsp_init.clone();
+    let audio_init = Arc::new(Barrier::new(1));
     let event_router = EventRouter::<RawControlEvent, ControlEvent>::new(rx_router, tx_router);
     let mut handles = HashMap::with_capacity(5);
     let quit = Arc::new(AtomicBool::new(false));
@@ -164,6 +163,7 @@ fn run(args: Args) -> Result<(), RunError> {
                    thread::Builder::new()
                        .name("dsp".to_owned())
                        .spawn({
+                       let init = audio_init.clone();
                        let quit = quit.clone();
                        move || {
                            const TUNE_FREQ: f32 = 440.0;
@@ -173,7 +173,7 @@ fn run(args: Args) -> Result<(), RunError> {
                            let mut n = 0;
                            let mut a = 1.0;
 
-                           dsp_init.wait();
+                           init.wait();
                            loop {
                                if quit.load(Ordering::Relaxed) {
                                    break;
@@ -201,7 +201,9 @@ fn run(args: Args) -> Result<(), RunError> {
     handles.insert("output",
                    thread::Builder::new()
                        .name("output".to_owned())
-                       .spawn(move || {
+                       .spawn({
+                       let init = audio_init.clone();
+                       move || {
                            let mut sio = rsoundio::SoundIo::new();
                            sio.set_name("ytterbium").unwrap();
                            // connect to default backend
@@ -229,7 +231,7 @@ fn run(args: Args) -> Result<(), RunError> {
                            out.register_underflow_callback(|out: rsoundio::OutStream| {
                                println!("Underflow in {} occured!", out.name().unwrap())
                            });
-                           audio_init.wait();
+                           init.wait();
                            out.open().unwrap();
                            match out.latency() {
                                Ok(latency) => println!("SW-latency: {}", latency),
@@ -241,7 +243,7 @@ fn run(args: Args) -> Result<(), RunError> {
                            thread::park();
                            println!("Disconnecting audio backend.");
                            sio.disconnect();
-                       })
+                       }})
                        .unwrap());
 
     // Wait until EOF is received.
