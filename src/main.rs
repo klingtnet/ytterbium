@@ -21,8 +21,8 @@ mod errors;
 use errors::RunError;
 
 mod event;
-mod receiver;
-use receiver::{Receiver, OscReceiver, MidiReceiver};
+mod io;
+use io::{Receiver, OscReceiver, MidiReceiver};
 use event::{ControlEvent, RawControlEvent};
 use event::router::EventRouter;
 

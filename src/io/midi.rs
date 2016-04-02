@@ -5,7 +5,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 use std::thread;
 
-use receiver::Receiver;
+use io::Receiver;
 use event::{ControlEvent, RawControlEvent};
 
 pub struct MidiReceiver {
@@ -40,7 +40,9 @@ impl MidiReceiver {
     }
 }
 impl MidiReceiver {
-    fn receive(&self, port: &portmidi::InputPort) -> Result<Option<Vec<portmidi::MidiEvent>>, RunError> {
+    fn receive(&self,
+               port: &portmidi::InputPort)
+               -> Result<Option<Vec<portmidi::MidiEvent>>, RunError> {
         port.read_n(self.buf_len).map_err(|err| RunError::MidiError(err))
     }
 }
@@ -72,37 +74,36 @@ impl Receiver for MidiReceiver {
 pub enum MidiEvent {
     Unknown,
     Unsupported,
-    NoEvent,
     NoteOn {
-        key: u32,
+        key: u8,
         velocity: f32,
         channel: u8,
     },
     NoteOff {
-        key: u32,
+        key: u8,
         velocity: f32,
         channel: u8,
     },
     PolyphonicKeyPressure {
-        key: u32,
+        key: u8,
         velocity: f32,
         channel: u8,
     },
     ControlChange {
-        controller: u32,
+        controller: u8,
         value: f32,
         channel: u8,
     },
     ProgramChange {
-        program: u32,
+        program: u8,
         channel: u8,
     },
     ChannelPressure {
-        pressure: u32,
+        pressure: u8,
         channel: u8,
     },
     PitchBend {
-        pitchbend: u32,
+        pitchbend: u16,
         channel: u8,
     },
     SysEx,
@@ -111,8 +112,8 @@ pub enum MidiEvent {
         msg_type: u8,
         value: u8,
     },
-    SongPosition(u32),
-    SongSelect(u32),
+    SongPosition(u16),
+    SongSelect(u8),
     TuneRequest,
     TimingClock,
     Start,
@@ -135,8 +136,8 @@ impl From<portmidi::MidiEvent> for MidiEvent {
                     value: (data1 & 0x0F) as u8,
                 }
             }
-            0xF2 => MidiEvent::SongPosition(data1 as u32 + ((data2 as u32) << 8)),
-            0xF3 => MidiEvent::SongSelect(data1 as u32),
+            0xF2 => MidiEvent::SongPosition(data1 as u16 + ((data2 as u16) << 8)),
+            0xF3 => MidiEvent::SongSelect(data1 as u8),
             0xF6 => MidiEvent::TuneRequest,
             0xF7 => MidiEvent::SysExEnd,
             0xF8 => MidiEvent::TimingClock,
@@ -152,21 +153,21 @@ impl From<portmidi::MidiEvent> for MidiEvent {
                 match status & 0xF0 {
                     0x80 => {
                         MidiEvent::NoteOff {
-                            key: data1 as u32,
+                            key: data1 as u8,
                             velocity: data2 as f32 / 127f32,
                             channel: channel,
                         }
                     }
                     0x90 => {
                         MidiEvent::NoteOn {
-                            key: data1 as u32,
+                            key: data1 as u8,
                             velocity: data2 as f32 / 127f32,
                             channel: channel,
                         }
                     }
                     0xA0 => {
                         MidiEvent::PolyphonicKeyPressure {
-                            key: data1 as u32,
+                            key: data1 as u8,
                             velocity: data2 as f32 / 127f32,
                             channel: channel,
                         }
@@ -176,7 +177,7 @@ impl From<portmidi::MidiEvent> for MidiEvent {
                             120...127 => MidiEvent::Unsupported,
                             _ => {
                                 MidiEvent::ControlChange {
-                                    controller: data1 as u32,
+                                    controller: data1 as u8,
                                     value: data2 as f32 / 127f32,
                                     channel: channel,
                                 }
@@ -185,19 +186,19 @@ impl From<portmidi::MidiEvent> for MidiEvent {
                     }
                     0xC0 => {
                         MidiEvent::ProgramChange {
-                            program: data1 as u32,
+                            program: data1 as u8,
                             channel: channel,
                         }
                     }
                     0xD0 => {
                         MidiEvent::ChannelPressure {
-                            pressure: data1 as u32,
+                            pressure: data1 as u8,
                             channel: channel,
                         }
                     }
                     0xE0 => {
                         MidiEvent::PitchBend {
-                            pitchbend: data1 as u32 + ((data2 as u32) << 8),
+                            pitchbend: data1 as u16 + ((data2 as u16) << 8),
                             channel: channel,
                         }
                     }

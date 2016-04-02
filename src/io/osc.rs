@@ -5,7 +5,7 @@ use std::net::{UdpSocket, SocketAddr};
 use std::sync::mpsc;
 use std::str::FromStr;
 
-use receiver::Receiver;
+use io::Receiver;
 use event::RawControlEvent;
 
 pub struct OscReceiver {
