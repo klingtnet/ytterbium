@@ -128,7 +128,6 @@ fn run(args: Args) -> Result<(), RunError> {
     let event_router = EventRouter::<RawControlEvent, ControlEvent>::new(rx_router, tx_router);
     let mut handles = HashMap::with_capacity(5);
     let quit = Arc::new(AtomicBool::new(false));
-    let quit_dsp = quit.clone();
 
     handles.insert("osc",
                    thread::Builder::new()
@@ -164,7 +163,9 @@ fn run(args: Args) -> Result<(), RunError> {
     handles.insert("dsp",
                    thread::Builder::new()
                        .name("dsp".to_owned())
-                       .spawn(move || {
+                       .spawn({
+                       let quit = quit.clone();
+                       move || {
                            const TUNE_FREQ: f32 = 440.0;
                            const SR: f32 = 48000.0;
                            let mut f = 440f32;
@@ -174,7 +175,7 @@ fn run(args: Args) -> Result<(), RunError> {
 
                            dsp_init.wait();
                            loop {
-                               if quit_dsp.load(Ordering::Relaxed) {
+                               if quit.load(Ordering::Relaxed) {
                                    break;
                                }
                                if let Ok(msg) = rx_dsp.try_recv() {
@@ -194,7 +195,7 @@ fn run(args: Args) -> Result<(), RunError> {
                                n += 128;
                                let cnt = producer.write_blocking(&data).unwrap();
                            }
-                       })
+                       }})
                        .unwrap());
 
     handles.insert("output",
