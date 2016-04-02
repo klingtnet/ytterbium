@@ -133,8 +133,9 @@ fn run(args: Args) -> Result<(), RunError> {
                        .name("osc".to_owned())
                        .spawn({
                            let tx = tx_receiver.clone();
+                           let socket_addr = args.socket_addr_in;
                            move || {
-                               let mut osc_receiver = OscReceiver::new(args.socket_addr_in)
+                               let mut osc_receiver = OscReceiver::new(socket_addr)
                                                           .unwrap();
                                osc_receiver.receive_and_send(tx)
                            }
