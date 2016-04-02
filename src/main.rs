@@ -4,6 +4,7 @@ extern crate rb;
 
 extern crate clap;
 
+use std::cmp;
 use std::collections::HashMap;
 use std::f32::consts::PI as PI32;
 use std::thread;
@@ -204,10 +205,50 @@ fn run(args: Args) -> Result<(), RunError> {
                    thread::Builder::new()
                        .name("output".to_owned())
                        .spawn({
-                       let init = audio_init.clone();
-                       move || {
-                            io::start(init, consumer);
-                       }})
+                           let init = audio_init.clone();
+                           let sample_rate = args.sample_rate as u32;
+                           move || {
+                                let mut sio = rsoundio::SoundIo::new();
+                                sio.set_name("ytterbium").unwrap();
+                                // connect to default backend
+                                sio.connect().unwrap();
+                                let backend = sio.current_backend().unwrap();
+                                sio.flush_events();
+                                let dev = sio.default_output_device().unwrap();
+                                let mut out_stream = dev.create_outstream().unwrap();
+                                out_stream.set_name("ytterbium").ok();
+                                out_stream.set_format(rsoundio::SioFormat::Float32LE).unwrap();
+                                out_stream.set_sample_rate(sample_rate);
+
+                                                       init.wait();
+                                out_stream.register_write_callback(|out: rsoundio::OutStream,
+                                                                  min_frame_count: u32,
+                                                                  max_frame_count: u32| {
+                                    const LEN: usize = 2048;
+                                    // TODO: use a length that is not smaller than 2048 for pulseaudio
+                                    let len = cmp::max(2048, cmp::min(LEN, max_frame_count as usize));
+                                    let mut data = vec![0.0f32; LEN];
+                                    let cnt = consumer.read_blocking(&mut data[..len]).unwrap();
+                                    let frames = vec![data[..len].iter().cloned().collect(),
+                                                      data[..len].iter().cloned().collect()];
+                                    out.write_stream_f32(min_frame_count, &frames).unwrap();
+                                });
+
+                                out_stream.register_underflow_callback(|out: rsoundio::OutStream| {
+                                    println!("Underflow in {} occured!", out.name().unwrap())
+                                });
+                                out_stream.open().unwrap();
+                                match out_stream.latency() {
+                                    Ok(latency) => println!("SW-latency: {}", latency),
+                                    Err(err) => println!("err: {}", err),
+                                }
+                                out_stream.start().unwrap();
+                                // Get handle of the current thread and park it.
+                                // The thread will be unparked when the application quits.
+                               thread::park();
+                               sio.disconnect();
+                           }
+                       })
                        .unwrap());
 
     // Wait until EOF is received.
