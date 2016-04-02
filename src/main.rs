@@ -122,7 +122,6 @@ fn run(args: Args) -> Result<(), RunError> {
     let buf = rb::SpscRb::new(4096);
     let (producer, consumer) = (buf.producer(), buf.consumer());
     let (tx_receiver, rx_router) = mpsc::channel();
-    let (tx_osc, tx_midi) = (tx_receiver.clone(), tx_receiver.clone());
     let (tx_router, rx_dsp) = mpsc::channel();
     let dsp_init = Arc::new(Barrier::new(1));
     let audio_init = dsp_init.clone();
@@ -134,18 +133,25 @@ fn run(args: Args) -> Result<(), RunError> {
     handles.insert("osc",
                    thread::Builder::new()
                        .name("osc".to_owned())
-                       .spawn(move || {
-                           let mut osc_receiver = OscReceiver::new(args.socket_addr_in).unwrap();
-                           osc_receiver.receive_and_send(tx_osc)
+                       .spawn({
+                           let tx_osc = tx_receiver.clone();
+                           move || {
+                               let mut osc_receiver = OscReceiver::new(args.socket_addr_in)
+                                                          .unwrap();
+                               osc_receiver.receive_and_send(tx_osc)
+                           }
                        })
                        .unwrap());
 
     handles.insert("midi",
                    thread::Builder::new()
                        .name("midi".to_owned())
-                       .spawn(move || {
-                           let mut midi_receiver = MidiReceiver::new().unwrap();
-                           midi_receiver.receive_and_send(tx_midi)
+                       .spawn({
+                           let tx_midi = tx_receiver.clone();
+                           move || {
+                               let mut midi_receiver = MidiReceiver::new().unwrap();
+                               midi_receiver.receive_and_send(tx_midi)
+                           }
                        })
                        .unwrap());
 
