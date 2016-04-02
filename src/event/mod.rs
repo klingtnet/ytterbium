@@ -3,7 +3,7 @@ extern crate portmidi;
 
 pub mod router;
 
-use receiver::MidiEvent;
+use io::MidiEvent;
 use rosc::OscPacket;
 
 #[derive(Debug)]
