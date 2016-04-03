@@ -195,7 +195,7 @@ fn run(args: Args) -> Result<(), RunError> {
                                                   .map(|x| (w * (x + n) as f32).sin() * a)
                                                   .collect::<Vec<f32>>();
                                    n += 128;
-                                   let cnt = producer.write_blocking(&data).unwrap();
+                                   producer.write_blocking(&data).unwrap();
                                }
                            }
                        })
@@ -212,7 +212,7 @@ fn run(args: Args) -> Result<(), RunError> {
                                 sio.set_name("ytterbium").unwrap();
                                 // connect to default backend
                                 sio.connect().unwrap();
-                                let backend = sio.current_backend().unwrap();
+                                sio.current_backend().unwrap();
                                 sio.flush_events();
                                 let dev = sio.default_output_device().unwrap();
                                 let mut out_stream = dev.create_outstream().unwrap();
@@ -228,7 +228,7 @@ fn run(args: Args) -> Result<(), RunError> {
                                     // TODO: use a length that is not smaller than 2048 for pulseaudio
                                     let len = cmp::max(2048, cmp::min(LEN, max_frame_count as usize));
                                     let mut data = vec![0.0f32; LEN];
-                                    let cnt = consumer.read_blocking(&mut data[..len]).unwrap();
+                                    consumer.read_blocking(&mut data[..len]).unwrap();
                                     let frames = vec![data[..len].iter().cloned().collect(),
                                                       data[..len].iter().cloned().collect()];
                                     out.write_stream_f32(min_frame_count, &frames).unwrap();
