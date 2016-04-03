@@ -116,7 +116,7 @@ fn main() {
     run(args).map_err(|err| {
         printerr!("{:?}", err);
         process::exit(1)
-    });
+    }).unwrap();
 }
 
 fn run(args: Args) -> Result<(), RunError> {
