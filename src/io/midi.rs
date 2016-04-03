@@ -6,7 +6,7 @@ use std::time::Duration;
 use std::thread;
 
 use io::Receiver;
-use event::{ControlEvent, RawControlEvent};
+use event::RawControlEvent;
 
 pub struct MidiReceiver {
     context: portmidi::PortMidi,
