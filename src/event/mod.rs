@@ -18,11 +18,11 @@ pub enum ControlEvent {
     Unsupported,
     NoEvent,
     NoteOn {
-        key: u32,
+        key: u8,
         velocity: f32,
     },
     NoteOff {
-        key: u32,
+        key: u8,
         velocity: f32,
     },
 }
