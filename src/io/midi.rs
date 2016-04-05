@@ -70,59 +70,6 @@ impl Receiver for MidiReceiver {
     }
 }
 
-#[derive(Debug)]
-pub enum MidiEvent {
-    Unknown,
-    Unsupported,
-    NoteOn {
-        key: u8,
-        velocity: f32,
-        channel: u8,
-    },
-    NoteOff {
-        key: u8,
-        velocity: f32,
-        channel: u8,
-    },
-    PolyphonicKeyPressure {
-        key: u8,
-        velocity: f32,
-        channel: u8,
-    },
-    ControlChange {
-        controller: u8,
-        value: f32,
-        channel: u8,
-    },
-    ProgramChange {
-        program: u8,
-        channel: u8,
-    },
-    ChannelPressure {
-        pressure: u8,
-        channel: u8,
-    },
-    PitchBend {
-        pitchbend: u16,
-        channel: u8,
-    },
-    SysEx,
-    SysExEnd,
-    TimeCodeQuarterFrame {
-        msg_type: u8,
-        value: u8,
-    },
-    SongPosition(u16),
-    SongSelect(u8),
-    TuneRequest,
-    TimingClock,
-    Start,
-    Stop,
-    Continue,
-    ActiveSensing,
-    Reset,
-}
-
 impl From<portmidi::MidiEvent> for MidiEvent {
     fn from(event: portmidi::MidiEvent) -> Self {
         let status = event.message.status;
@@ -207,4 +154,57 @@ impl From<portmidi::MidiEvent> for MidiEvent {
             }
         }
     }
+}
+
+#[derive(Debug)]
+pub enum MidiEvent {
+    Unknown,
+    Unsupported,
+    NoteOn {
+        key: u8,
+        velocity: f32,
+        channel: u8,
+    },
+    NoteOff {
+        key: u8,
+        velocity: f32,
+        channel: u8,
+    },
+    PolyphonicKeyPressure {
+        key: u8,
+        velocity: f32,
+        channel: u8,
+    },
+    ControlChange {
+        controller: u8,
+        value: f32,
+        channel: u8,
+    },
+    ProgramChange {
+        program: u8,
+        channel: u8,
+    },
+    ChannelPressure {
+        pressure: u8,
+        channel: u8,
+    },
+    PitchBend {
+        pitchbend: u16,
+        channel: u8,
+    },
+    SysEx,
+    SysExEnd,
+    TimeCodeQuarterFrame {
+        msg_type: u8,
+        value: u8,
+    },
+    SongPosition(u16),
+    SongSelect(u8),
+    TuneRequest,
+    TimingClock,
+    Start,
+    Stop,
+    Continue,
+    ActiveSensing,
+    Reset,
 }
