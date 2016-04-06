@@ -162,7 +162,7 @@ fn run(args: Args) -> Result<(), RunError> {
                                const SR: f32 = 48000.0;
                                let mut w = (2.0 * PI32 * 440.0) / SR;
                                let mut n = 0;
-                               let mut a = 1.0;
+                               let mut a = 0.7;
 
                                init.wait();
                                loop {
