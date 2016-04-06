@@ -159,10 +159,8 @@ fn run(args: Args) -> Result<(), RunError> {
                            let init = audio_init.clone();
                            let quit = quit.clone();
                            move || {
-                               const TUNE_FREQ: f32 = 440.0;
                                const SR: f32 = 48000.0;
-                               let mut f = 440f32;
-                               let mut w = (2.0 * PI32 * f) / SR;
+                               let mut w = (2.0 * PI32 * 440.0) / SR;
                                let mut n = 0;
                                let mut a = 1.0;
 
