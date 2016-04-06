@@ -6,12 +6,14 @@ use std::time::Duration;
 use std::thread;
 
 use io::Receiver;
-use event::RawControlEvent;
+
+use event::ControlEvent;
 
 pub struct MidiReceiver {
     context: portmidi::PortMidi,
     in_ports: Vec<portmidi::InputPort>,
     buf_len: usize,
+    pitch_convert: PitchConvert,
 }
 impl MidiReceiver {
     pub fn new() -> Result<Self, RunError> {
@@ -35,6 +37,7 @@ impl MidiReceiver {
                 context: context,
                 in_ports: in_ports,
                 buf_len: BUF_LEN,
+                pitch_convert: PitchConvert::new(440.0),
             })
         }
     }
@@ -45,9 +48,28 @@ impl MidiReceiver {
                -> Result<Option<Vec<portmidi::MidiEvent>>, RunError> {
         port.read_n(self.buf_len).map_err(|err| RunError::MidiError(err))
     }
+
+    fn to_control_event(&self, event: MidiEvent) -> ControlEvent {
+        match event {
+            MidiEvent::NoteOn{key, velocity, channel} => {
+                ControlEvent::NoteOn {
+                    key: key,
+                    freq: self.pitch_convert.key_to_hz(key),
+                    velocity: velocity as f32/127.0,
+                }
+            }
+            MidiEvent::NoteOff{key, velocity, channel} => {
+                ControlEvent::NoteOff {
+                    key: key,
+                    velocity: velocity as f32/127.0,
+                }
+            }
+            _ => ControlEvent::Unsupported,
+        }
+    }
 }
 impl Receiver for MidiReceiver {
-    fn receive_and_send(&mut self, tx: mpsc::Sender<RawControlEvent>) {
+    fn receive_and_send(&mut self, tx: mpsc::Sender<ControlEvent>) {
         let mut event_buf = Vec::with_capacity(self.buf_len);
         let timeout = Duration::from_millis(20);
         loop {
@@ -62,7 +84,7 @@ impl Receiver for MidiReceiver {
 
             event_buf.sort_by_key(|e| e.timestamp);
             while let Some(event) = event_buf.pop() {
-                tx.send(RawControlEvent::Midi(event)).unwrap();
+                tx.send(self.to_control_event(MidiEvent::from(event))).unwrap();
             }
 
             thread::sleep(timeout);
@@ -207,4 +229,29 @@ pub enum MidiEvent {
     Continue,
     ActiveSensing,
     Reset,
+}
+
+struct PitchConvert {
+    table: Vec<f32>,
+}
+impl PitchConvert {
+    pub fn new(tune_freq: f32) -> Self {
+        PitchConvert {
+            // see https://en.wikipedia.org/wiki/MIDI_Tuning_Standard
+            table: (0..128)
+                       .map(|key| {
+                           let dist_concert_a = key as isize - 69;
+                           2.0f32.powf(dist_concert_a as f32 / 12.0) * tune_freq
+                       })
+                       .collect::<Vec<_>>(),
+        }
+    }
+
+    pub fn key_to_hz(&self, key: u8) -> f32 {
+        if (key as usize) < self.table.len() {
+            self.table[key as usize]
+        } else {
+            self.table[self.table.len() - 1]
+        }
+    }
 }

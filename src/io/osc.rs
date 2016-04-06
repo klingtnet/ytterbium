@@ -1,12 +1,15 @@
 extern crate rosc;
 
+use rosc::OscPacket;
+
 use errors::RunError;
 use std::net::{UdpSocket, SocketAddr};
 use std::sync::mpsc;
 use std::str::FromStr;
 
 use io::Receiver;
-use event::RawControlEvent;
+
+use event::ControlEvent;
 
 pub struct OscReceiver {
     socket: UdpSocket,
@@ -22,20 +25,23 @@ impl OscReceiver {
     }
 }
 impl OscReceiver {
-    fn receive(&mut self) -> Result<RawControlEvent, RunError> {
+    fn receive(&mut self) -> Result<OscPacket, RunError> {
         let (size, addr) = try!(self.socket
                                     .recv_from(&mut self.buf)
                                     .map_err(|err| RunError::IoError(err)));
         rosc::decoder::decode(&self.buf)
-            .map(|msg| RawControlEvent::Osc(msg))
             .map_err(|err| RunError::OscError(err))
+    }
+
+    fn to_control_event(&self, event: OscPacket) -> ControlEvent {
+        ControlEvent::Unknown
     }
 }
 impl Receiver for OscReceiver {
-    fn receive_and_send(&mut self, tx: mpsc::Sender<RawControlEvent>) {
+    fn receive_and_send(&mut self, tx: mpsc::Sender<ControlEvent>) {
         loop {
             match self.receive() {
-                Ok(raw_event) => tx.send(raw_event).unwrap(),
+                Ok(packet) => tx.send(self.to_control_event(packet)).unwrap(),
                 Err(RunError::OscError(err)) => println!("Could not decode osc packet: {:?}", err),
                 err @ _ => panic!(err),
             }

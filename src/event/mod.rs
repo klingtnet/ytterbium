@@ -1,16 +1,8 @@
 extern crate rosc;
 extern crate portmidi;
 
-pub mod router;
-
 use io::MidiEvent;
 use rosc::OscPacket;
-
-#[derive(Debug)]
-pub enum RawControlEvent {
-    Osc(OscPacket),
-    Midi(portmidi::MidiEvent),
-}
 
 #[derive(Debug)]
 pub enum ControlEvent {
@@ -19,20 +11,13 @@ pub enum ControlEvent {
     NoEvent,
     NoteOn {
         key: u8,
+        freq: f32,
         velocity: f32,
     },
     NoteOff {
         key: u8,
         velocity: f32,
     },
-}
-impl From<RawControlEvent> for ControlEvent {
-    fn from(raw: RawControlEvent) -> ControlEvent {
-        match raw {
-            RawControlEvent::Osc(packet) => translate_osc(packet),
-            RawControlEvent::Midi(event) => translate_midi(event),
-        }
-    }
 }
 
 pub fn translate_osc(packet: rosc::OscPacket) -> ControlEvent {
@@ -54,24 +39,5 @@ pub fn translate_osc(packet: rosc::OscPacket) -> ControlEvent {
             }
         }
         OscPacket::Bundle(_) => ControlEvent::Unknown,
-    }
-}
-
-// TODO: do MidiTuningStandard conversion here and return a NoteOn with frequency and velocity
-pub fn translate_midi(event: portmidi::MidiEvent) -> ControlEvent {
-    match MidiEvent::from(event) {
-        MidiEvent::NoteOn{key, velocity, ..} => {
-            ControlEvent::NoteOn {
-                key: key,
-                velocity: velocity,
-            }
-        }
-        MidiEvent::NoteOff{key, velocity, ..} => {
-            ControlEvent::NoteOff {
-                key: key,
-                velocity: velocity,
-            }
-        }
-        _ => ControlEvent::Unsupported,
     }
 }

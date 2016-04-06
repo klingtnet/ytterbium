@@ -24,8 +24,7 @@ use errors::RunError;
 mod event;
 mod io;
 use io::{Receiver, OscReceiver, MidiReceiver};
-use event::{ControlEvent, RawControlEvent};
-use event::router::EventRouter;
+use event::ControlEvent;
 
 const MAX_VOICES: usize = 24;
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -122,10 +121,8 @@ fn main() {
 fn run(args: Args) -> Result<(), RunError> {
     let buf = rb::SpscRb::new(4096);
     let (producer, consumer) = (buf.producer(), buf.consumer());
-    let (tx_receiver, rx_router) = mpsc::channel();
-    let (tx_router, rx_dsp) = mpsc::channel();
+    let (tx_receiver, rx_dsp) = mpsc::channel();
     let audio_init = Arc::new(Barrier::new(1));
-    let event_router = EventRouter::<RawControlEvent, ControlEvent>::new(rx_router, tx_router);
     let mut handles = HashMap::with_capacity(5);
     let quit = Arc::new(AtomicBool::new(false));
 
@@ -155,12 +152,6 @@ fn run(args: Args) -> Result<(), RunError> {
                        })
                        .unwrap());
 
-    handles.insert("router",
-                   thread::Builder::new()
-                       .name("router".to_owned())
-                       .spawn(move || event_router.route())
-                       .unwrap());
-
     handles.insert("dsp",
                    thread::Builder::new()
                        .name("dsp".to_owned())
@@ -182,11 +173,9 @@ fn run(args: Args) -> Result<(), RunError> {
                                    }
                                    if let Ok(msg) = rx_dsp.try_recv() {
                                        match msg {
-                                           ControlEvent::NoteOn{key, velocity} => {
+                                           ControlEvent::NoteOn{key, freq, velocity} => {
                                                a = velocity;
-                                               f = 2.0f32.powf((key as isize - 69) as f32 / 12.0) *
-                                                   TUNE_FREQ;
-                                               w = (2.0 * PI32 * f) / SR;
+                                               w = (2.0 * PI32 * freq) / SR;
                                            }
                                            _ => (),
                                        }
