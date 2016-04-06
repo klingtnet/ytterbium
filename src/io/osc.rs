@@ -41,7 +41,7 @@ impl Receiver for OscReceiver {
             match self.receive() {
                 Ok(packet) => tx.send(self.to_control_event(packet)).unwrap(),
                 Err(RunError::OscError(err)) => println!("Could not decode osc packet: {:?}", err),
-                err @ _ => panic!(err),
+                err => panic!(err),
             }
         }
     }
