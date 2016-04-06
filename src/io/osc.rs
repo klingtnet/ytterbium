@@ -27,8 +27,9 @@ impl OscReceiver {
     fn receive(&mut self) -> Result<OscPacket, RunError> {
         let (size, _) = try!(self.socket
                                     .recv_from(&mut self.buf)
-        rosc::decoder::decode(&self.buf)
                                     .map_err(RunError::IoError));
+        rosc::decoder::decode(&self.buf[..size])
+            .map_err(RunError::OscError)
     }
 
     fn to_control_event(&self, event: OscPacket) -> ControlEvent {
