@@ -8,7 +8,6 @@ use rosc::OscPacket;
 pub enum ControlEvent {
     Unknown,
     Unsupported,
-    NoEvent,
     NoteOn {
         key: u8,
         freq: f32,
