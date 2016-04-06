@@ -5,7 +5,6 @@ use rosc::OscPacket;
 use errors::RunError;
 use std::net::{UdpSocket, SocketAddr};
 use std::sync::mpsc;
-use std::str::FromStr;
 
 use io::Receiver;
 

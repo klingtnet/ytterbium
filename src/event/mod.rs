@@ -1,7 +1,6 @@
 extern crate rosc;
 extern crate portmidi;
 
-use io::MidiEvent;
 use rosc::OscPacket;
 
 #[derive(Debug)]
