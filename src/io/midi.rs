@@ -18,7 +18,7 @@ pub struct MidiReceiver {
 impl MidiReceiver {
     pub fn new() -> Result<Self, RunError> {
         const BUF_LEN: usize = 1024;
-        let context = try!(portmidi::PortMidi::new().map_err(|err| RunError::MidiError(err)));
+        let context = try!(portmidi::PortMidi::new().map_err(RunError::MidiError));
         let in_devices = context.devices()
                                 .unwrap()
                                 .into_iter()
@@ -46,7 +46,7 @@ impl MidiReceiver {
     fn receive(&self,
                port: &portmidi::InputPort)
                -> Result<Option<Vec<portmidi::MidiEvent>>, RunError> {
-        port.read_n(self.buf_len).map_err(|err| RunError::MidiError(err))
+        port.read_n(self.buf_len).map_err(RunError::MidiError)
     }
 
     fn to_control_event(&self, event: MidiEvent) -> ControlEvent {

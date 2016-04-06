@@ -260,7 +260,7 @@ fn read_eof() -> Result<(), RunError> {
         // Read from `stdin` until Ctrl-D (`EOF`) is received.
         eof = try!(::std::io::stdin()
                        .read_line(&mut buffer)
-                       .map_err(|err| RunError::IoError(err))) == 0;
+                       .map_err(RunError::IoError)) == 0;
     }
     Ok(())
 }

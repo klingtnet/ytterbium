@@ -16,7 +16,7 @@ pub struct OscReceiver {
 }
 impl OscReceiver {
     pub fn new(addr: SocketAddr) -> Result<Self, RunError> {
-        let socket = try!(UdpSocket::bind(addr).map_err(|err| RunError::IoError(err)));
+        let socket = try!(UdpSocket::bind(addr).map_err(RunError::IoError));
         Ok(OscReceiver {
             socket: socket,
             buf: [0u8; rosc::decoder::MTU],
@@ -27,9 +27,8 @@ impl OscReceiver {
     fn receive(&mut self) -> Result<OscPacket, RunError> {
         let (size, addr) = try!(self.socket
                                     .recv_from(&mut self.buf)
-                                    .map_err(|err| RunError::IoError(err)));
         rosc::decoder::decode(&self.buf)
-            .map_err(|err| RunError::OscError(err))
+                                    .map_err(RunError::IoError));
     }
 
     fn to_control_event(&self, event: OscPacket) -> ControlEvent {
