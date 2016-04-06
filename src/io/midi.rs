@@ -55,13 +55,13 @@ impl MidiReceiver {
                 ControlEvent::NoteOn {
                     key: key,
                     freq: self.pitch_convert.key_to_hz(key),
-                    velocity: velocity as f32/127.0,
+                    velocity: velocity,
                 }
             }
             MidiEvent::NoteOff{key, velocity, ..} => {
                 ControlEvent::NoteOff {
                     key: key,
-                    velocity: velocity as f32/127.0,
+                    velocity: velocity,
                 }
             }
             _ => ControlEvent::Unsupported,
