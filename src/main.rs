@@ -23,8 +23,9 @@ use errors::RunError;
 
 mod event;
 mod io;
+mod dsp;
 use io::{Receiver, OscReceiver, MidiReceiver};
-use event::ControlEvent;
+use event::{ControlEvent, Controllable};
 
 const MAX_VOICES: usize = 24;
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -160,30 +161,32 @@ fn run(args: Args) -> Result<(), RunError> {
                            let quit = quit.clone();
                            let sample_rate = args.sample_rate;
                            move || {
-                               const SR: f32 = 48000.0;
-                               let mut w = (2.0 * PI32 * 440.0) / SR;
+                               let mut w = (2.0 * PI32 * 440.0) / sample_rate as f32;
                                let mut n = 0;
-                               let mut a = 0.7;
+                               let mut adsr = dsp::ADSR::new(sample_rate);
+                               let mut a = adsr.tick() as f32;
+                               let mut buf: [f32; 32] = [0.0; 32];
 
                                init.wait();
                                loop {
                                    if quit.load(Ordering::Relaxed) {
                                        break;
                                    }
-                                   if let Ok(msg) = rx_dsp.try_recv() {
-                                       match msg {
-                                           ControlEvent::NoteOn{key, freq, velocity} => {
-                                               a = velocity;
-                                               w = (2.0 * PI32 * freq) / SR;
+                                   for i in 0..buf.len() {
+                                       if let Ok(msg) = rx_dsp.try_recv() {
+                                           adsr.handle(&msg);
+                                           match msg {
+                                               ControlEvent::NoteOn { key, freq, velocity } => {
+                                                   w = (2.0 * PI32 * freq) / sample_rate as f32;
+                                               }
+                                               _ => (),
                                            }
-                                           _ => (),
                                        }
+                                       a = adsr.tick() as f32;
+                                       buf[i] = (w * (n as f32)).sin() * a;
+                                       n += 1;
                                    }
-                                   let data = (0..128)
-                                                  .map(|x| (w * (x + n) as f32).sin() * a)
-                                                  .collect::<Vec<f32>>();
-                                   n += 128;
-                                   producer.write_blocking(&data).unwrap();
+                                   producer.write_blocking(&buf).unwrap();
                                }
                            }
                        })
