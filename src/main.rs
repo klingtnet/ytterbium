@@ -200,7 +200,6 @@ fn run(args: Args) -> Result<(), RunError> {
                                 sio.set_name("ytterbium").unwrap();
                                 // connect to default backend
                                 sio.connect().unwrap();
-                                sio.current_backend().unwrap();
                                 sio.flush_events();
                                 let dev = sio.default_output_device().unwrap();
                                 let mut out_stream = dev.create_outstream().unwrap();
