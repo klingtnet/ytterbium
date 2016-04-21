@@ -40,7 +40,7 @@ macro_rules! printerr(
 struct Args {
     socket_addr_in: SocketAddr,
     socket_addr_out: SocketAddr,
-    sample_rate: u32,
+    sample_rate: usize,
 }
 
 /// Parses and validates the command line arguments.
@@ -80,7 +80,7 @@ fn get_args() -> Args {
                    .get_matches();
 
     let sample_rate = args.value_of("sample-rate")
-                          .map_or(48_000, |str_val| str_val.parse::<u32>().unwrap());
+                          .map_or(48_000, |str_val| str_val.parse::<usize>().unwrap());
     let ip_addr = match IpAddr::from_str(args.value_of("address").unwrap()) {
         Ok(val) => val,
         Err(err) => {
@@ -158,6 +158,7 @@ fn run(args: Args) -> Result<(), RunError> {
                        .spawn({
                            let init = audio_init.clone();
                            let quit = quit.clone();
+                           let sample_rate = args.sample_rate;
                            move || {
                                const SR: f32 = 48000.0;
                                let mut w = (2.0 * PI32 * 440.0) / SR;
