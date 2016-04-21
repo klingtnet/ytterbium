@@ -15,3 +15,7 @@ pub enum ControlEvent {
         velocity: f32,
     },
 }
+
+pub trait Controllable {
+    fn handle(&mut self, msg: &ControlEvent);
+}
