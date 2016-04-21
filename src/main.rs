@@ -113,10 +113,12 @@ fn get_args() -> Args {
 
 fn main() {
     let args = get_args();
-    run(args).map_err(|err| {
-        printerr!("{:?}", err);
-        process::exit(1)
-    }).unwrap();
+    run(args)
+        .map_err(|err| {
+            printerr!("{:?}", err);
+            process::exit(1)
+        })
+        .unwrap();
 }
 
 fn run(args: Args) -> Result<(), RunError> {
@@ -134,8 +136,7 @@ fn run(args: Args) -> Result<(), RunError> {
                            let tx = tx_receiver.clone();
                            let socket_addr = args.socket_addr_in;
                            move || {
-                               let mut osc_receiver = OscReceiver::new(socket_addr)
-                                                          .unwrap();
+                               let mut osc_receiver = OscReceiver::new(socket_addr).unwrap();
                                osc_receiver.receive_and_send(tx)
                            }
                        })
@@ -210,18 +211,21 @@ fn run(args: Args) -> Result<(), RunError> {
                                 out_stream.set_format(rsoundio::SioFormat::Float32LE).unwrap();
                                 out_stream.set_sample_rate(sample_rate);
 
-                                                       init.wait();
+                                init.wait();
                                 out_stream.register_write_callback(|out: rsoundio::OutStream,
                                                                   min_frame_count: u32,
                                                                   max_frame_count: u32| {
                                     const LEN: usize = 2048;
                                     // TODO: use a length that is not smaller than 2048 for pulseaudio
-                                    let len = cmp::max(2048, cmp::min(LEN, max_frame_count as usize));
+                                    let len = cmp::min(LEN, max_frame_count as usize);
                                     let mut data = vec![0.0f32; LEN];
                                     consumer.read_blocking(&mut data[..len]).unwrap();
                                     let frames = vec![data[..len].iter().cloned().collect(),
                                                       data[..len].iter().cloned().collect()];
-                                    out.write_stream_f32(min_frame_count, &frames).unwrap();
+                                    match out.write_stream_f32(min_frame_count, &frames) {
+                                        Ok(_) => (),
+                                        Err(err) => println!("{}", err),
+                                    }
                                 });
 
                                 out_stream.register_underflow_callback(|out: rsoundio::OutStream| {
@@ -235,8 +239,8 @@ fn run(args: Args) -> Result<(), RunError> {
                                 out_stream.start().unwrap();
                                 // Get handle of the current thread and park it.
                                 // The thread will be unparked when the application quits.
-                               thread::park();
-                               sio.disconnect();
+                                thread::park();
+                                sio.disconnect();
                            }
                        })
                        .unwrap());

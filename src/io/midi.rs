@@ -51,14 +51,14 @@ impl MidiReceiver {
 
     fn to_control_event(&self, event: MidiEvent) -> ControlEvent {
         match event {
-            MidiEvent::NoteOn{key, velocity, ..} => {
+            MidiEvent::NoteOn { key, velocity, .. } => {
                 ControlEvent::NoteOn {
                     key: key,
                     freq: self.pitch_convert.key_to_hz(key),
                     velocity: velocity,
                 }
             }
-            MidiEvent::NoteOff{key, velocity, ..} => {
+            MidiEvent::NoteOff { key, velocity, .. } => {
                 ControlEvent::NoteOff {
                     key: key,
                     velocity: velocity,
