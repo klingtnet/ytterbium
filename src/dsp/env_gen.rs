@@ -1,4 +1,3 @@
-use std::ops::{Index, IndexMut};
 use std::default::Default;
 
 use event::{ControlEvent, Controllable};
