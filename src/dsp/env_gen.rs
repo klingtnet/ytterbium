@@ -17,8 +17,7 @@ impl ADSRState {
             ADSRState::Attack => ADSRState::Decay,
             ADSRState::Decay => ADSRState::Sustain,
             ADSRState::Sustain => ADSRState::Release,
-            ADSRState::Release => ADSRState::Off,
-            ADSRState::Off => ADSRState::Off,
+            ADSRState::Release | ADSRState::Off => ADSRState::Off,
         }
     }
 }
