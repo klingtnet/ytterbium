@@ -15,12 +15,12 @@ pub enum ADSRState {
 }
 impl ADSRState {
     fn next(&self) -> ADSRState {
-        match self {
-            &ADSRState::Attack => ADSRState::Decay,
-            &ADSRState::Decay => ADSRState::Sustain,
-            &ADSRState::Sustain => ADSRState::Release,
-            &ADSRState::Release => ADSRState::Off,
-            &ADSRState::Off => ADSRState::Off,
+        match *self {
+            ADSRState::Attack => ADSRState::Decay,
+            ADSRState::Decay => ADSRState::Sustain,
+            ADSRState::Sustain => ADSRState::Release,
+            ADSRState::Release => ADSRState::Off,
+            ADSRState::Off => ADSRState::Off,
         }
     }
 }
@@ -91,12 +91,12 @@ impl ADSR {
 }
 impl Controllable for ADSR {
     fn handle(&mut self, msg: &ControlEvent) {
-        match msg {
-            &ControlEvent::NoteOn { key, freq, velocity } => {
+        match *msg {
+            ControlEvent::NoteOn { key, freq, velocity } => {
                 self.state_change(ADSRState::Attack);
                 self.sustain = velocity as Level;
             }
-            &ControlEvent::NoteOff { .. } => self.state_change(ADSRState::Release),
+            ControlEvent::NoteOff { .. } => self.state_change(ADSRState::Release),
             _ => (),
         }
     }
