@@ -1,13 +1,10 @@
 extern crate rosc;
-extern crate portmidi as midi;
-extern crate rsoundio;
-
-use std::io;
+extern crate portmidi;
 
 #[derive(Debug)]
 pub enum RunError {
-    IoError(io::Error),
+    IoError(::std::io::Error),
     OscError(rosc::OscError),
-    MidiError(midi::Error),
+    MidiError(portmidi::Error),
     NoMidiDeviceAvailable,
 }
