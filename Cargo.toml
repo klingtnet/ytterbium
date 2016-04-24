@@ -13,7 +13,7 @@ readme = "README.md"
 
 [dependencies]
 rosc = "^0.1"
-portmidi = "^0.2.2"
+portmidi = "^0.2"
 rsoundio = "^0.1"
 rb = "^0.2"
 clap = "^2.2"
