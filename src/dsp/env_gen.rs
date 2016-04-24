@@ -89,7 +89,7 @@ impl ADSR {
 impl Controllable for ADSR {
     fn handle(&mut self, msg: &ControlEvent) {
         match *msg {
-            ControlEvent::NoteOn { key, freq, velocity } => {
+            ControlEvent::NoteOn { velocity, .. } => {
                 self.state_change(ADSRState::Attack);
                 self.level = 0.0;
                 self.sustain = velocity as Float;
