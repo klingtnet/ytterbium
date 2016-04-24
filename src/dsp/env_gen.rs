@@ -24,15 +24,15 @@ impl ADSRState {
 
 pub struct ADSR {
     sample_rate: usize,
-    attack: (Time, Level),
+    attack: (Time, Float),
     decay: Time,
-    sustain: Level,
+    sustain: Float,
     release: Time,
     state: ADSRState,
     ticks_left: usize,
-    gain: Level,
-    level: Level,
-    target_level: Level,
+    gain: Float,
+    level: Float,
+    target_level: Float,
 }
 impl ADSR {
     pub fn new(sample_rate: usize) -> Self {
@@ -41,7 +41,7 @@ impl ADSR {
         adsr
     }
 
-    pub fn tick(&mut self) -> Level {
+    pub fn tick(&mut self) -> Float {
         match self.state {
             ADSRState::Off => 0.0,
             ADSRState::Sustain => self.level,
@@ -67,19 +67,19 @@ impl ADSR {
             ADSRState::Attack => {
                 let (time, level) = self.attack;
                 self.ticks_left = (time * self.sample_rate as Time) as usize;
-                self.gain = 4.0 / self.ticks_left as Level;
+                self.gain = 4.0 / self.ticks_left as Float;
                 self.target_level = level;
             }
             ADSRState::Decay => {
                 let time = self.decay;
                 self.ticks_left = (time * self.sample_rate as Time) as usize;
-                self.gain = 4.0 / self.ticks_left as Level;
+                self.gain = 4.0 / self.ticks_left as Float;
                 self.target_level = self.sustain;
             }
             ADSRState::Release => {
                 let time = self.release;
                 self.ticks_left = (time * self.sample_rate as Time) as usize;
-                self.gain = 8.0 / self.ticks_left as Level;
+                self.gain = 8.0 / self.ticks_left as Float;
                 self.target_level = 0.0
             }
             _ => {}
@@ -91,7 +91,7 @@ impl Controllable for ADSR {
         match *msg {
             ControlEvent::NoteOn { key, freq, velocity } => {
                 self.state_change(ADSRState::Attack);
-                self.sustain = velocity as Level;
+                self.sustain = velocity as Float;
             }
             ControlEvent::NoteOff { .. } => self.state_change(ADSRState::Release),
             _ => (),
