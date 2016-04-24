@@ -6,7 +6,6 @@ extern crate clap;
 
 use std::cmp;
 use std::collections::HashMap;
-use std::f32::consts::PI as PI32;
 use std::thread;
 use std::sync::mpsc;
 use std::sync::{Arc, Barrier};
@@ -18,14 +17,15 @@ use std::io::Write;
 
 use rb::{RB, RbProducer, RbConsumer};
 
-mod errors;
-use errors::RunError;
-
 mod event;
 mod io;
 mod dsp;
+mod types;
+mod errors;
 use io::{Receiver, OscReceiver, MidiReceiver};
 use event::{ControlEvent, Controllable};
+use types::*;
+use errors::RunError;
 
 const MAX_VOICES: usize = 24;
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -162,11 +162,11 @@ fn run(args: Args) -> Result<(), RunError> {
                            let quit = quit.clone();
                            let sample_rate = args.sample_rate;
                            move || {
-                               let mut w = (2.0 * PI32 * 440.0) / sample_rate as f32;
+                               let mut w = (2.0 * PI * 440.0) / sample_rate as Float;
                                let mut n = 0;
                                let mut adsr = dsp::ADSR::new(sample_rate);
-                               let mut a = adsr.tick() as f32;
-                               let mut buf: [f32; 32] = [0.0; 32];
+                               let mut a = adsr.tick() as Float;
+                               let mut buf: [Float; 32] = [0.0; 32];
 
                                init.wait();
                                loop {
@@ -178,13 +178,13 @@ fn run(args: Args) -> Result<(), RunError> {
                                            adsr.handle(&msg);
                                            match msg {
                                                ControlEvent::NoteOn { key, freq, velocity } => {
-                                                   w = (2.0 * PI32 * freq) / sample_rate as f32;
+                                                   w = (2.0 * PI * freq as Float) / sample_rate as Float;
                                                }
                                                _ => (),
                                            }
                                        }
-                                       a = adsr.tick() as f32;
-                                       buf[i] = (w * (n as f32)).sin() * a;
+                                       a = adsr.tick() as Float;
+                                       *sample = (w * (n as Float)).sin() * a;
                                        n += 1;
                                    }
                                    producer.write_blocking(&buf).unwrap();
@@ -217,11 +217,11 @@ fn run(args: Args) -> Result<(), RunError> {
                                                                   max_frame_count: u32| {
                                     const LEN: usize = 2048;
                                     // TODO: use a length that is not smaller than 2048 for pulseaudio
-                                    let len = cmp::min(LEN, max_frame_count as usize);
-                                    let mut data = vec![0.0f32; LEN];
+                                    let len = cmp::min(LEN, min_frame_count as usize);
+                                    let mut data: Vec<Float> = vec![0.0; LEN];
                                     consumer.read_blocking(&mut data[..len]).unwrap();
-                                    let frames = vec![data[..len].iter().cloned().collect(),
-                                                      data[..len].iter().cloned().collect()];
+                                    let frames = vec![data[..len].iter().map(|s| *s as f32).collect(),
+                                                      data[..len].iter().map(|s| *s as f32).collect()];
                                     match out.write_stream_f32(min_frame_count, &frames) {
                                         Ok(_) => (),
                                         Err(err) => println!("{}", err),

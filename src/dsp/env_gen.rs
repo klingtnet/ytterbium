@@ -1,9 +1,7 @@
 use std::default::Default;
 
+use types::*;
 use event::{ControlEvent, Controllable};
-
-type Time = f64;
-type Level = f64;
 
 #[derive(PartialEq,Debug,Copy,Clone)]
 pub enum ADSRState {

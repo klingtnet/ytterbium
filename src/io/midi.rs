@@ -1,5 +1,6 @@
 extern crate portmidi;
 
+use types::*;
 use errors::RunError;
 use std::sync::mpsc;
 use std::time::Duration;
@@ -123,21 +124,21 @@ impl From<portmidi::MidiEvent> for MidiEvent {
                     0x80 => {
                         MidiEvent::NoteOff {
                             key: data1 as u8,
-                            velocity: data2 as f32 / 127f32,
+                            velocity: data2 as Float / 127.0,
                             channel: channel,
                         }
                     }
                     0x90 => {
                         MidiEvent::NoteOn {
                             key: data1 as u8,
-                            velocity: data2 as f32 / 127f32,
+                            velocity: data2 as Float / 127.0,
                             channel: channel,
                         }
                     }
                     0xA0 => {
                         MidiEvent::PolyphonicKeyPressure {
                             key: data1 as u8,
-                            velocity: data2 as f32 / 127f32,
+                            velocity: data2 as Float / 127.0,
                             channel: channel,
                         }
                     }
@@ -147,7 +148,7 @@ impl From<portmidi::MidiEvent> for MidiEvent {
                             _ => {
                                 MidiEvent::ControlChange {
                                     controller: data1 as u8,
-                                    value: data2 as f32 / 127f32,
+                                    value: data2 as Float / 127.0,
                                     channel: channel,
                                 }
                             }
@@ -184,22 +185,22 @@ pub enum MidiEvent {
     Unsupported,
     NoteOn {
         key: u8,
-        velocity: f32,
+        velocity: Float,
         channel: u8,
     },
     NoteOff {
         key: u8,
-        velocity: f32,
+        velocity: Float,
         channel: u8,
     },
     PolyphonicKeyPressure {
         key: u8,
-        velocity: f32,
+        velocity: Float,
         channel: u8,
     },
     ControlChange {
         controller: u8,
-        value: f32,
+        value: Float,
         channel: u8,
     },
     ProgramChange {
@@ -232,22 +233,23 @@ pub enum MidiEvent {
 }
 
 struct PitchConvert {
-    table: Vec<f32>,
+    table: Vec<Float>,
 }
 impl PitchConvert {
-    pub fn new(tune_freq: f32) -> Self {
+    pub fn new(tune_freq: Float) -> Self {
         PitchConvert {
             // see https://en.wikipedia.org/wiki/MIDI_Tuning_Standard
             table: (0..128)
                        .map(|key| {
                            let dist_concert_a = key as isize - 69;
-                           2.0f32.powf(dist_concert_a as f32 / 12.0) * tune_freq
+                           let two: Float = 2.0;
+                           two.powf(dist_concert_a as Float / 12.0) * tune_freq
                        })
                        .collect::<Vec<_>>(),
         }
     }
 
-    pub fn key_to_hz(&self, key: u8) -> f32 {
+    pub fn key_to_hz(&self, key: u8) -> Float {
         if (key as usize) < self.table.len() {
             self.table[key as usize]
         } else {

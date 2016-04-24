@@ -1,18 +1,20 @@
 extern crate rosc;
 extern crate portmidi;
 
+use types::*;
+
 #[derive(Debug)]
 pub enum ControlEvent {
     Unknown,
     Unsupported,
     NoteOn {
         key: u8,
-        freq: f32,
-        velocity: f32,
+        freq: Float,
+        velocity: Float,
     },
     NoteOff {
         key: u8,
-        velocity: f32,
+        velocity: Float,
     },
 }
 
