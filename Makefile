@@ -1,4 +1,4 @@
-.PHONY: clean
+.PHONY: clean clippy
 
 SOURCES:=$(wildcard ./src/*.rs)
 BENCHES:=$(wildcard ./benches/*.rs)
@@ -7,6 +7,9 @@ EXAMPLES:=$(wildcard ./examples/*.rs)
 BUILD_OPTS:=--jobs $(shell nproc)
 
 all: test build examples doc
+
+clippy:
+	rustup run nightly -- cargo clippy --release -- -Dclippy -Wclippy_pedantic
 
 build: $(SOURCES)
 	cargo build $(BUILD_OPTS)
