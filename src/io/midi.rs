@@ -83,7 +83,7 @@ impl Receiver for MidiReceiver {
                 }
             }
 
-            event_buf.sort_by_key(|e| e.timestamp);
+            // event_buf.sort_by_key(|e| e.timestamp);
             while let Some(event) = event_buf.pop() {
                 tx.send(self.to_control_event(MidiEvent::from(event))).unwrap();
             }
