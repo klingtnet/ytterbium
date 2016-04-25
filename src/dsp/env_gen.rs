@@ -91,8 +91,7 @@ impl Controllable for ADSR {
         match *msg {
             ControlEvent::NoteOn { velocity, .. } => {
                 self.state_change(ADSRState::Attack);
-                self.level = 0.0;
-                self.sustain = velocity as Float;
+                self.sustain = Float::from_db((1.0 - velocity) * -60.0);
             }
             ControlEvent::NoteOff { .. } => self.state_change(ADSRState::Release),
             _ => (),
@@ -102,10 +101,10 @@ impl Controllable for ADSR {
 impl Default for ADSR {
     fn default() -> Self {
         ADSR {
-            attack: (0.15, 1.0),
-            decay: 0.4,
-            sustain: 0.5,
-            release: 4.0,
+            attack: (0.05, Float::from_db(-3.0 )),
+            decay: 0.25,
+            sustain: Float::from_db(-12.0),
+            release: 1.5,
             sample_rate: 48_000,
             state: ADSRState::Off,
             ticks_left: 0,
