@@ -227,7 +227,7 @@ fn run(args: Args) -> Result<(), RunError> {
                                 });
                                 out_stream.open().unwrap();
                                 match out_stream.latency() {
-                                    Ok(latency) => println!("SW-latency: {}", latency),
+                                    Ok(latency) => println!("SW-latency: {:.2} ms", 1000.0*latency),
                                     Err(err) => println!("err: {}", err),
                                 }
                                 out_stream.start().unwrap();
