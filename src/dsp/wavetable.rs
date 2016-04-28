@@ -16,6 +16,8 @@ pub struct WavetableOsc {
     table: Vec<Float>,
     // tables: Vec<Vec<Float>>,
 }
+
+#[derive(PartialEq,Eq,Hash,Debug)]
 enum Waveform {
     Sine,
     Saw,
