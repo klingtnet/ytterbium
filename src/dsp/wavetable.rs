@@ -8,11 +8,11 @@ use event::{ControlEvent, Controllable};
 const TABLE_SIZE: usize = 512;
 
 pub struct WavetableOsc {
-    w: Float,
+    phaseIncr: Float,
     sample_rate: usize,
     freq: Float,
     phase: Float,
-    pos: Float,
+    phasor: Float,
     table: Vec<Float>,
     // tables: Vec<Vec<Float>>,
 }
@@ -36,28 +36,28 @@ impl WavetableOsc {
         fft.process(&spectrum, &mut signal);
         let table = signal.iter().map(|c| c.re as Float).collect::<Vec<Float>>();
         WavetableOsc {
-            w: freq * TABLE_SIZE as Float / sample_rate as Float,
+            phaseIncr: freq * TABLE_SIZE as Float / sample_rate as Float,
             sample_rate: sample_rate,
             freq: freq,
             phase: 0.0,
-            pos: 0.0,
+            phasor: 0.0,
             table: table,
         }
     }
 
     pub fn set_freq(&mut self, freq: Float) {
         self.freq = freq;
-        self.w = freq * TABLE_SIZE as Float / self.sample_rate as Float;
-        self.pos = self.phase;
+        self.phaseIncr = freq * TABLE_SIZE as Float / self.sample_rate as Float;
+        self.phasor = self.phase;
     }
 
     pub fn tick(&mut self) -> Float {
-        let (i,j) = (self.pos.floor() as usize % TABLE_SIZE, self.pos.ceil() as usize() % TABLE_SIZE);
-        let sample = self.table[i] + (self.table[j] - self.table[i]) * (self.pos - i as Float);
-        self.pos = if TABLE_SIZE as Float - self.pos < self.w {
+        let (i,j) = (self.phasor.floor() as usize % TABLE_SIZE, self.phasor.ceil() as usize() % TABLE_SIZE);
+        let sample = self.table[i] + (self.table[j] - self.table[i]) * (self.phasor - i as Float);
+        self.phasor = if TABLE_SIZE as Float - self.phasor < self.phaseIncr {
             0.0
         } else {
-            self.pos + self.w
+            self.phasor + self.phaseIncr
         };
         sample
     }
