@@ -7,7 +7,7 @@ use event::{ControlEvent, Controllable};
 
 const TABLE_SIZE: usize = 512;
 
-pub struct Wavetable {
+pub struct WavetableOsc {
     w: Float,
     sample_rate: usize,
     freq: Float,
@@ -24,7 +24,7 @@ enum Waveform {
     Noise,
 }
 
-impl Wavetable {
+impl WavetableOsc {
     pub fn new(freq: Float, sample_rate: usize) -> Self {
         let mut spectrum: Vec<_> = vec![num::Complex { re: 0.0, im: 0.0 }; TABLE_SIZE];
         // sine
@@ -33,7 +33,7 @@ impl Wavetable {
         let mut signal = spectrum.clone();
         fft.process(&spectrum, &mut signal);
         let table = signal.iter().map(|c| c.re as Float).collect::<Vec<Float>>();
-        Wavetable {
+        WavetableOsc {
             w: freq * TABLE_SIZE as Float / sample_rate as Float,
             sample_rate: sample_rate,
             freq: freq,
@@ -61,7 +61,7 @@ impl Wavetable {
     }
 }
 
-impl Controllable for Wavetable {
+impl Controllable for WavetableOsc {
     fn handle(&mut self, msg: &ControlEvent) {
         match *msg {
             ControlEvent::NoteOn { freq, .. } => {
