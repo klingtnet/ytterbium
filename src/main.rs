@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate approx;
+
 extern crate rosc;
 extern crate rsoundio;
 extern crate rb;
@@ -162,10 +165,8 @@ fn run(args: Args) -> Result<(), RunError> {
                            let quit = quit.clone();
                            let sample_rate = args.sample_rate;
                            move || {
-                               let mut w = (2.0 * PI * 440.0) / sample_rate as Float;
-                               let mut n = 0;
                                let mut adsr = dsp::ADSR::new(sample_rate);
-                               let mut a = adsr.tick() as Float;
+                               let mut osc = dsp::Wavetable::new(440.0, sample_rate);
                                let mut buf: [Float; 32] = [0.0; 32];
 
                                init.wait();
@@ -173,19 +174,12 @@ fn run(args: Args) -> Result<(), RunError> {
                                    if quit.load(Ordering::Relaxed) {
                                        break;
                                    }
-                                   for i in 0..buf.len() {
+                                   for sample in &mut buf {
                                        if let Ok(msg) = rx_dsp.try_recv() {
                                            adsr.handle(&msg);
-                                           match msg {
-                                               ControlEvent::NoteOn { key, freq, velocity } => {
-                                                   w = (2.0 * PI * freq as Float) / sample_rate as Float;
-                                               }
-                                               _ => (),
-                                           }
+                                           osc.handle(&msg);
                                        }
-                                       a = adsr.tick() as Float;
-                                       *sample = (w * (n as Float)).sin() * a;
-                                       n += 1;
+                                       *sample = osc.tick() * adsr.tick();
                                    }
                                    producer.write_blocking(&buf).unwrap();
                                }
