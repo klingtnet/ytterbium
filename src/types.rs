@@ -1,9 +1,17 @@
 pub use std::f64::consts::PI;
 
 pub type Time = f32;
+/// A type alias for internal floating point precision.
 pub type Float = f64;
+
+/// Defines conversion methods from a plain `1/x` ratio into db and vice versa.
 pub trait Db {
+	/// Returns the ratio in dB.
+    ///
+    /// Example:
+    /// `assert!(Db::to_rb(0.0001), -80.0)`
 	fn to_db(ratio: Float) -> Float;
+	/// Returns the `1/x` ratio from the given dB value.
 	fn from_db(db: Float) -> Float;
 }
 
