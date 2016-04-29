@@ -153,7 +153,11 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
         }
         Waveform::Tri => {
             for i in (1..harmonics).filter(|i| i % 2 == 1) {
-
+                let sign  = if i % 4 == 1 {
+                    1.0
+                } else {
+                    -1.0
+                };
                 let magnitude = ((i * i) as Float).recip();
                 spectrum[i] = Complex {
                     re: 1.0,
