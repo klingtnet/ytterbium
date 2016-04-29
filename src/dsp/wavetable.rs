@@ -178,7 +178,7 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
 
 /// A band-limited wavetable oscillator.
 pub struct WavetableOsc<'a> {
-    phaseIncr: Float,
+    phase_incr: Float,
     sample_rate: usize,
     phase: Float,
     phasor: Float,
@@ -189,7 +189,7 @@ impl<'a> WavetableOsc<'a> {
     /// Constructs a wavetable oscillator for the given sample rate.
     pub fn new(sample_rate: usize, wavetables: &'a HashMap<Waveform, Vec<Wavetable>>) -> Self {
         WavetableOsc {
-            phaseIncr: 0.0,
+            phase_incr: 0.0,
             sample_rate: sample_rate,
             phase: 0.0,
             phasor: 0.0,
@@ -200,7 +200,7 @@ impl<'a> WavetableOsc<'a> {
 
     /// Sets the oscillators frequency in Hz.
     pub fn set_freq(&mut self, freq: Float) {
-        self.phaseIncr = freq as Float / self.sample_rate as Float;
+        self.phase_incr = freq as Float / self.sample_rate as Float;
     }
 
     /// Sets the waveform to use.
@@ -211,7 +211,7 @@ impl<'a> WavetableOsc<'a> {
     /// Returns the next sample from the oscillator.
     pub fn tick(&mut self) -> Float {
         let sample = self.sample(self.phasor);
-        self.phasor = self.phasor + self.phaseIncr;
+        self.phasor = self.phasor + self.phase_incr;
         if self.phasor > 1.0 {
             self.phasor = self.phasor.fract(); // fractional part
         }
@@ -224,7 +224,7 @@ impl<'a> WavetableOsc<'a> {
         let mut idx = 0;
         for i in 0..wavetables.len() {
             idx = i;
-            if wavetables[idx].max_phase_incr > self.phaseIncr {
+            if wavetables[idx].max_phase_incr > self.phase_incr {
                 break;
             }
         }
