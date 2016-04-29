@@ -43,6 +43,7 @@ pub enum Waveform {
     Saw,
     Square,
     Tri,
+    SharpTri,
     Random,
 }
 
@@ -71,6 +72,8 @@ pub fn generate_wavetables(fundamental_freq: Float,
                   build_wavetables(Waveform::Square, fundamental_freq, sample_rate));
     tables.insert(Waveform::Tri,
                   build_wavetables(Waveform::Tri, fundamental_freq, sample_rate));
+    tables.insert(Waveform::SharpTri,
+                  build_wavetables(Waveform::SharpTri, fundamental_freq, sample_rate));
     tables.insert(Waveform::Random,
                   build_wavetables(Waveform::Random, fundamental_freq, sample_rate));
     tables
@@ -162,6 +165,21 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
                 spectrum[i] = Complex {
                     re: 1.0,
                     im: -1.0 * magnitude,
+                };
+                spectrum[table_size - i] = -spectrum[i];
+            }
+        }
+        Waveform::SharpTri => {
+            for i in (1..harmonics).filter(|i| i % 2 == 1) {
+                let sign  = if i % 4 == 1 {
+                    1.0
+                } else {
+                    -1.0
+                };
+                let magnitude = (i as Float).recip();
+                spectrum[i] = Complex {
+                    re: 1.0,
+                    im: -1.0 * magnitude * sign,
                 };
                 spectrum[table_size - i] = -spectrum[i];
             }
