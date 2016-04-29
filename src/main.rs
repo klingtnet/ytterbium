@@ -166,7 +166,8 @@ fn run(args: Args) -> Result<(), RunError> {
                            let sample_rate = args.sample_rate;
                            move || {
                                let mut adsr = dsp::ADSR::new(sample_rate);
-                               let mut osc = dsp::WavetableOsc::new(sample_rate);
+                               let wavetables = dsp::generate_wavetables(20.0, sample_rate);
+                               let mut osc = dsp::WavetableOsc::new(sample_rate, &wavetables); // add wavetable parameter
                                let mut buf: [Float; 32] = [0.0; 32];
 
                                init.wait();

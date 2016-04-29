@@ -15,7 +15,7 @@ const SCALE: bool = true;
 
 /// Stores a period of a band-limited signal together with
 /// the maximum frequency before aliasing occurs.
-struct Wavetable {
+pub struct Wavetable {
     /// The band-limited signal
     table: Vec<Float>,
     /// The maximum phase increment (frequency) that is handled by this table.
@@ -37,13 +37,13 @@ impl Wavetable {
 }
 
 /// A band-limited wavetable oscillator.
-pub struct WavetableOsc {
+pub struct WavetableOsc<'a> {
     phaseIncr: Float,
     sample_rate: usize,
     phase: Float,
     phasor: Float,
     waveform: Waveform,
-    tables: HashMap<Waveform, Vec<Wavetable>>,
+    tables: &'a HashMap<Waveform, Vec<Wavetable>>,
 }
 
 /// Implemented waveforms.
@@ -68,29 +68,134 @@ macro_rules! scale {
     };
 }
 
-impl WavetableOsc {
+/// Builds wavetables for each waveform and returns a `HashMap` containing them.
+pub fn generate_wavetables(fundamental_freq: Float,
+                    sample_rate: usize)
+                    -> HashMap<Waveform, Vec<Wavetable>> {
+    let mut tables: HashMap<Waveform, Vec<Wavetable>> = HashMap::new();
+    tables.insert(Waveform::Sine,
+                  build_wavetables(Waveform::Sine, fundamental_freq, sample_rate));
+    tables.insert(Waveform::Saw,
+                  build_wavetables(Waveform::Saw, fundamental_freq, sample_rate));
+    tables.insert(Waveform::Square,
+                  build_wavetables(Waveform::Square, fundamental_freq, sample_rate));
+    tables.insert(Waveform::Tri,
+                  build_wavetables(Waveform::Tri, fundamental_freq, sample_rate));
+    tables.insert(Waveform::Random,
+                  build_wavetables(Waveform::Random, fundamental_freq, sample_rate));
+    tables
+}
+
+/// Builds the band-limited wavetables for the given waveform, fundamental frequency and
+/// sample rate.
+fn build_wavetables(waveform: Waveform,
+                    fundamental_freq: Float,
+                    sample_rate: usize)
+                    -> Vec<Wavetable> {
+    let min_table_size = 64;
+    let mut phase_incr = fundamental_freq * 2.0 / sample_rate as Float;
+    let (mut harmonics, mut table_size) = match waveform {
+        Waveform::Sine => (1, 4096),
+        _ => {
+            let harmonics = sample_rate / (2 * fundamental_freq as usize);
+            let table_size = harmonics.next_power_of_two() * 2 * OVERSAMPLING;
+            (harmonics, table_size)
+        }
+    };
+    let mut tables: Vec<Wavetable> = Vec::with_capacity((harmonics as Float).log2() as usize);
+    // use sine if only 1 harmonic is left, otherwise the last table for waveforms with
+    // only odd harmonics would be empty!
+    while harmonics > 0 {
+        let mut fft = FFT::new(table_size, INVERSE);
+        let mut spectrum = vec![num::Complex::zero(); table_size];
+        let mut signal = spectrum.clone();
+
+        generate_spectrum(waveform, harmonics, &mut spectrum);
+
+        fft.process(&spectrum, &mut signal);
+        scale!(SCALE, signal);
+
+        tables.push(Wavetable {
+            table: signal.iter().map(|c| c.re).collect::<Vec<_>>(),
+            max_phase_incr: phase_incr,
+        });
+
+        harmonics >>= 1; // half the number of harmonics
+        phase_incr *= 2.0;
+        let next_table_size = harmonics.next_power_of_two() * 2 * OVERSAMPLING;
+        table_size = ::std::cmp::max(min_table_size, next_table_size);
+    }
+    tables
+}
+
+/// Generates a band-limited spectrum with given number of harmonics for the given waveform.
+fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Complex<Float>>) {
+    let table_size = spectrum.len();
+    if harmonics == 1 {
+        // use a pure sine
+        spectrum[1] = Complex {
+            re: 1.0,
+            im: -1.0,
+        };
+        spectrum[table_size - 1] = -spectrum[1];
+        return;
+    }
+    match waveform {
+        Waveform::Saw => {
+            for i in 1..harmonics {
+                let magnitude = (i as Float).recip();
+                spectrum[i] = Complex {
+                    re: 1.0,
+                    im: -1.0 * magnitude,
+                };
+                spectrum[table_size - i] = -spectrum[i];
+            }
+        }
+        Waveform::Square => {
+            for i in (1..harmonics).filter(|i| i % 2 == 1) {
+                let magnitude = (i as Float).recip();
+                spectrum[i] = Complex {
+                    re: 1.0,
+                    im: -1.0 * magnitude,
+                };
+                spectrum[table_size - i] = -spectrum[i];
+            }
+        }
+        Waveform::Tri => {
+            for i in (1..harmonics).filter(|i| i % 2 == 1) {
+
+                let magnitude = ((i * i) as Float).recip();
+                spectrum[i] = Complex {
+                    re: 1.0,
+                    im: -1.0 * magnitude,
+                };
+                spectrum[table_size - i] = -spectrum[i];
+            }
+        }
+        Waveform::Random => {
+            for i in 1..harmonics {
+                let magnitude = (i as Float).recip();
+                spectrum[i] = Complex {
+                    re: 1.0,
+                    im: -rand::random::<Float>() * magnitude,
+                };
+                spectrum[table_size - i] = -spectrum[i];
+            }
+        }
+        _ => {}
+    }
+}
+
+impl<'a> WavetableOsc<'a> {
     /// Constructs a wavetable oscillator for the given sample rate.
-    /// TODO: Pass pregenerated wavetables to share them accross oscillator instances.
-    pub fn new(sample_rate: usize) -> Self {
-        let fundamental_freq = 20.0;
-        let mut tables: HashMap<Waveform, Vec<Wavetable>> = HashMap::new();
-        tables.insert(Waveform::Sine,
-                      Self::build_wavetables(Waveform::Sine, fundamental_freq, sample_rate));
-        tables.insert(Waveform::Saw,
-                      Self::build_wavetables(Waveform::Saw, fundamental_freq, sample_rate));
-        tables.insert(Waveform::Square,
-                      Self::build_wavetables(Waveform::Square, fundamental_freq, sample_rate));
-        tables.insert(Waveform::Tri,
-                      Self::build_wavetables(Waveform::Tri, fundamental_freq, sample_rate));
-        tables.insert(Waveform::Random,
-                      Self::build_wavetables(Waveform::Random, fundamental_freq, sample_rate));
+    pub fn new(sample_rate: usize, wavetables: &'a HashMap<Waveform, Vec<Wavetable>>) -> Self {
         WavetableOsc {
             phaseIncr: 0.0,
             sample_rate: sample_rate,
             phase: 0.0,
             phasor: 0.0,
             waveform: Waveform::Square,
-            tables: tables,
+            tables: wavetables,
         }
     }
 
@@ -128,111 +233,9 @@ impl WavetableOsc {
         let wavetable = &wavetables[idx];
         wavetable.sample(phasor)
     }
-
-    /// Builds the band-limited wavetables for the given waveform, fundamental frequency and
-    /// sample rate.
-    fn build_wavetables(waveform: Waveform,
-                        fundamental_freq: Float,
-                        sample_rate: usize)
-                        -> Vec<Wavetable> {
-        let min_table_size = 64;
-        let mut phase_incr = fundamental_freq * 2.0 / sample_rate as Float;
-        let (mut harmonics, mut table_size) = match waveform {
-            Waveform::Sine => (1, 2048),
-            _ => {
-                let harmonics = sample_rate / (2 * fundamental_freq as usize);
-                let table_size = harmonics.next_power_of_two() * 2 * OVERSAMPLING;
-                (harmonics, table_size)
-            }
-        };
-        let mut tables: Vec<Wavetable> = Vec::with_capacity((harmonics as Float).log2() as usize);
-        // use sine if only 1 harmonic is left, otherwise the last table for waveforms with
-        // only odd harmonics would be empty!
-        while harmonics > 0 {
-            let mut fft = FFT::new(table_size, INVERSE);
-            let mut spectrum = vec![num::Complex::zero(); table_size];
-            let mut signal = spectrum.clone();
-
-            Self::generate_spectrum(waveform, harmonics, &mut spectrum);
-
-            fft.process(&spectrum, &mut signal);
-            scale!(SCALE, signal);
-
-            tables.push(Wavetable {
-                table: signal.iter().map(|c| c.re).collect::<Vec<_>>(),
-                max_phase_incr: phase_incr,
-            });
-
-            harmonics >>= 1; // half the number of harmonics
-            phase_incr *= 2.0;
-            let next_table_size = harmonics.next_power_of_two() * 2 * OVERSAMPLING;
-            table_size = ::std::cmp::max(min_table_size, next_table_size);
-        }
-        tables
-    }
-
-    /// Generates a band-limited spectrum with given number of harmonics for the given waveform.
-    fn generate_spectrum(waveform: Waveform,
-                         harmonics: usize,
-                         spectrum: &mut Vec<Complex<Float>>) {
-        let table_size = spectrum.len();
-        if harmonics == 1 {
-            // use a pure sine
-            spectrum[1] = Complex {
-                re: 1.0,
-                im: -1.0,
-            };
-            spectrum[table_size - 1] = -spectrum[1];
-            return;
-        }
-        match waveform {
-            Waveform::Saw => {
-                for i in 1..harmonics {
-                    let magnitude = (i as Float).recip();
-                    spectrum[i] = Complex {
-                        re: 1.0,
-                        im: -1.0 * magnitude,
-                    };
-                    spectrum[table_size - i] = -spectrum[i];
-                }
-            }
-            Waveform::Square => {
-                for i in (1..harmonics).filter(|i| i % 2 == 1) {
-                    let magnitude = (i as Float).recip();
-                    spectrum[i] = Complex {
-                        re: 1.0,
-                        im: -1.0 * magnitude,
-                    };
-                    spectrum[table_size - i] = -spectrum[i];
-                }
-            }
-            Waveform::Tri => {
-                for i in (1..harmonics).filter(|i| i % 2 == 1) {
-
-                    let magnitude = ((i * i) as Float).recip();
-                    spectrum[i] = Complex {
-                        re: 1.0,
-                        im: -1.0 * magnitude,
-                    };
-                    spectrum[table_size - i] = -spectrum[i];
-                }
-            }
-            Waveform::Random => {
-                for i in 1..harmonics {
-                    let magnitude = (i as Float).recip();
-                    spectrum[i] = Complex {
-                        re: 1.0,
-                        im: -rand::random::<Float>() * magnitude,
-                    };
-                    spectrum[table_size - i] = -spectrum[i];
-                }
-            }
-            _ => {}
-        }
-    }
 }
 
-impl Controllable for WavetableOsc {
+impl<'a> Controllable for WavetableOsc<'a> {
     fn handle(&mut self, msg: &ControlEvent) {
         match *msg {
             ControlEvent::NoteOn { freq, .. } => {
