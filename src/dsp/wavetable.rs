@@ -36,16 +36,6 @@ impl Wavetable {
     }
 }
 
-/// A band-limited wavetable oscillator.
-pub struct WavetableOsc<'a> {
-    phaseIncr: Float,
-    sample_rate: usize,
-    phase: Float,
-    phasor: Float,
-    waveform: Waveform,
-    tables: &'a HashMap<Waveform, Vec<Wavetable>>,
-}
-
 /// Implemented waveforms.
 #[derive(PartialEq,Eq,Hash,Debug,Copy,Clone)]
 pub enum Waveform {
@@ -186,6 +176,15 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
     }
 }
 
+/// A band-limited wavetable oscillator.
+pub struct WavetableOsc<'a> {
+    phaseIncr: Float,
+    sample_rate: usize,
+    phase: Float,
+    phasor: Float,
+    waveform: Waveform,
+    tables: &'a HashMap<Waveform, Vec<Wavetable>>,
+}
 impl<'a> WavetableOsc<'a> {
     /// Constructs a wavetable oscillator for the given sample rate.
     pub fn new(sample_rate: usize, wavetables: &'a HashMap<Waveform, Vec<Wavetable>>) -> Self {
