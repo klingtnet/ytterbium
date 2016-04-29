@@ -152,7 +152,10 @@ impl WavetableOsc {
             let mut fft = FFT::new(table_size, INVERSE);
             let mut spectrum = vec![num::Complex::zero(); table_size];
             let mut signal = spectrum.clone();
-            println!("{:?}, table-size: {}, contained harmonics: {}", waveform, table_size, harmonics);
+            println!("{:?}, table-size: {}, contained harmonics: {}",
+                     waveform,
+                     table_size,
+                     harmonics);
 
             Self::generate_spectrum(waveform, harmonics, &mut spectrum);
 
@@ -173,7 +176,9 @@ impl WavetableOsc {
     }
 
     /// Generates a band-limited spectrum with given number of harmonics for the given waveform.
-    fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Complex<Float>>) {
+    fn generate_spectrum(waveform: Waveform,
+                         harmonics: usize,
+                         spectrum: &mut Vec<Complex<Float>>) {
         let table_size = spectrum.len();
         if harmonics == 1 {
             // use a pure sine
