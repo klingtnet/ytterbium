@@ -152,10 +152,6 @@ impl WavetableOsc {
             let mut fft = FFT::new(table_size, INVERSE);
             let mut spectrum = vec![num::Complex::zero(); table_size];
             let mut signal = spectrum.clone();
-            println!("{:?}, table-size: {}, contained harmonics: {}",
-                     waveform,
-                     table_size,
-                     harmonics);
 
             Self::generate_spectrum(waveform, harmonics, &mut spectrum);
 
