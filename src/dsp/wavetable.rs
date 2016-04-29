@@ -164,7 +164,7 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
                 let magnitude = ((i * i) as Float).recip();
                 spectrum[i] = Complex {
                     re: 1.0,
-                    im: -1.0 * magnitude,
+                    im: -1.0 * magnitude * sign,
                 };
                 spectrum[table_size - i] = -spectrum[i];
             }
