@@ -205,17 +205,22 @@ pub struct WavetableOsc<'a> {
     phase: Float,
     phasor: Float,
     waveform: Waveform,
+    id: String,
     tables: &'a HashMap<Waveform, Vec<Wavetable>>,
 }
 impl<'a> WavetableOsc<'a> {
     /// Constructs a wavetable oscillator for the given sample rate.
-    pub fn new(sample_rate: usize, wavetables: &'a HashMap<Waveform, Vec<Wavetable>>) -> Self {
+    pub fn new<S: Into<String>>(id: S,
+               sample_rate: usize,
+               wavetables: &'a HashMap<Waveform, Vec<Wavetable>>)
+               -> Self {
         WavetableOsc {
             phase_incr: 0.0,
             sample_rate: sample_rate,
             phase: 0.0,
             phasor: 0.0,
-            waveform: Waveform::Square,
+            waveform: Waveform::Saw,
+            id: id.into(),
             tables: wavetables,
         }
     }
