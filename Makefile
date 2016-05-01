@@ -9,7 +9,8 @@ BUILD_OPTS:=--jobs $(shell nproc)
 all: test build examples doc
 
 clippy:
-	rustup run nightly -- cargo clippy --release -- -Dclippy -Wclippy_pedantic
+	rustup run nightly -- cargo build --features lints
+	rustup run nightly -- cargo clippy -- -Dclippy -Wclippy_pedantic --verbose
 
 build: $(SOURCES)
 	cargo build $(BUILD_OPTS)
