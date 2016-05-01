@@ -4,22 +4,24 @@ use rosc::OscPacket;
 
 use errors::RunError;
 use std::net::{UdpSocket, SocketAddr};
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 
-use io::Receiver;
+use io::{Receiver, PitchConvert};
 
 use event::ControlEvent;
 
 pub struct OscReceiver {
     socket: UdpSocket,
     buf: [u8; rosc::decoder::MTU],
+    pitch_convert: Arc<PitchConvert>,
 }
 impl OscReceiver {
-    pub fn new(addr: SocketAddr) -> Result<Self, RunError> {
+    pub fn new(addr: SocketAddr, pitch_convert: Arc<PitchConvert>) -> Result<Self, RunError> {
         let socket = try!(UdpSocket::bind(addr).map_err(RunError::IoError));
         Ok(OscReceiver {
             socket: socket,
             buf: [0u8; rosc::decoder::MTU],
+            pitch_convert: pitch_convert,
         })
     }
 }

@@ -2,11 +2,11 @@ extern crate portmidi;
 
 use types::*;
 use errors::RunError;
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 use std::time::Duration;
 use std::thread;
 
-use io::Receiver;
+use io::{Receiver, PitchConvert};
 
 use event::ControlEvent;
 
@@ -14,10 +14,10 @@ pub struct MidiReceiver {
     context: portmidi::PortMidi,
     in_ports: Vec<portmidi::InputPort>,
     buf_len: usize,
-    pitch_convert: PitchConvert,
+    pitch_convert: Arc<PitchConvert>,
 }
 impl MidiReceiver {
-    pub fn new() -> Result<Self, RunError> {
+    pub fn new(pitch_convert: Arc<PitchConvert>) -> Result<Self, RunError> {
         const BUF_LEN: usize = 1024;
         let context = try!(portmidi::PortMidi::new().map_err(RunError::MidiError));
         let in_devices = context.devices()
@@ -38,7 +38,7 @@ impl MidiReceiver {
                 context: context,
                 in_ports: in_ports,
                 buf_len: BUF_LEN,
-                pitch_convert: PitchConvert::new(440.0),
+                pitch_convert: pitch_convert,
             })
         }
     }
@@ -230,30 +230,4 @@ pub enum MidiEvent {
     Continue,
     ActiveSensing,
     Reset,
-}
-
-struct PitchConvert {
-    table: Vec<Float>,
-}
-impl PitchConvert {
-    pub fn new(tune_freq: Float) -> Self {
-        PitchConvert {
-            // see https://en.wikipedia.org/wiki/MIDI_Tuning_Standard
-            table: (0..128)
-                       .map(|key| {
-                           let dist_concert_a = key as isize - 69;
-                           let two: Float = 2.0;
-                           two.powf(dist_concert_a as Float / 12.0) * tune_freq
-                       })
-                       .collect::<Vec<_>>(),
-        }
-    }
-
-    pub fn key_to_hz(&self, key: u8) -> Float {
-        if (key as usize) < self.table.len() {
-            self.table[key as usize]
-        } else {
-            self.table[self.table.len() - 1]
-        }
-    }
 }
