@@ -21,6 +21,10 @@ rustfft = "^1.0"
 num = "^0.1"
 rand = "^0.3"
 approx = "^0.1"
+clippy={version="^0", optional=true}
+
+[features]
+lints = ["clippy"]
 
 [[bin]]
 doc = false
