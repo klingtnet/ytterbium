@@ -31,6 +31,7 @@ pub struct ADSR {
     state: ADSRState,
     ticks_left: usize,
     gain: Float,
+    velocity: Float,
     level: Float,
     target_level: Float,
 }
@@ -42,6 +43,7 @@ impl ADSR {
     }
 
     pub fn tick(&mut self) -> Float {
+        self.velocity *
         match self.state {
             ADSRState::Off => 0.0,
             ADSRState::Sustain => self.level,
@@ -91,7 +93,7 @@ impl Controllable for ADSR {
         match *msg {
             ControlEvent::NoteOn { velocity, .. } => {
                 self.state_change(ADSRState::Attack);
-                self.sustain = Float::from_db((1.0 - velocity) * -60.0);
+                self.velocity = Float::from_db((1.0 - velocity) * -60.0);
             }
             ControlEvent::NoteOff { .. } => self.state_change(ADSRState::Release),
             _ => (),
@@ -110,6 +112,7 @@ impl Default for ADSR {
             ticks_left: 0,
             gain: 0.0,
             level: 0.0,
+            velocity: 0.0,
             target_level: 1.0,
         }
     }
