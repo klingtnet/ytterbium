@@ -93,9 +93,15 @@ impl Controllable for ADSR {
         match *msg {
             ControlEvent::NoteOn { velocity, .. } => {
                 self.state_change(ADSRState::Attack);
-                self.velocity = Float::from_db((1.0 - velocity) * -60.0);
+                self.velocity = Float::from_db((1.0 - velocity) * -30.0);
             }
             ControlEvent::NoteOff { .. } => self.state_change(ADSRState::Release),
+            ControlEvent::ADSR { attack, decay, sustain, release, .. } => {
+                self.attack.0 = attack;
+                self.decay = decay;
+                self.sustain = sustain;
+                self.release = release;
+            }
             _ => (),
         }
     }
