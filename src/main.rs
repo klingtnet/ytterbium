@@ -170,10 +170,11 @@ fn run(args: Args) -> Result<(), RunError> {
                            let init = audio_init.clone();
                            let quit = quit.clone();
                            let sample_rate = args.sample_rate;
+                           let pitch_convert_handle = pitch_convert.clone();
                            move || {
                                let mut adsr = dsp::ADSR::new(sample_rate);
                                let wavetables = dsp::generate_wavetables(20.0, sample_rate);
-                               let mut osc = dsp::WavetableOsc::new("OSC1", sample_rate, &wavetables);
+                               let mut osc = dsp::WavetableOsc::new("OSC1", sample_rate, &wavetables, pitch_convert_handle.clone());
                                let mut buf: [Float; 32] = [0.0; 32];
 
                                init.wait();

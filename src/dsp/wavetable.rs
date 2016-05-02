@@ -3,10 +3,12 @@ extern crate num;
 extern crate rand;
 
 use std::collections::HashMap;
+use std::sync::Arc;
 use self::num::{Complex, Zero};
 use self::rustfft::FFT;
 
 use types::*;
+use io::PitchConvert;
 use event::{ControlEvent, Controllable};
 
 const OVERSAMPLING: usize = 2;
@@ -206,14 +208,16 @@ pub struct WavetableOsc<'a> {
     phasor: Float,
     waveform: Waveform,
     id: String,
+    pitch_convert: Arc<PitchConvert>,
     tables: &'a HashMap<Waveform, Vec<Wavetable>>,
 }
 impl<'a> WavetableOsc<'a> {
     /// Constructs a wavetable oscillator for the given sample rate.
     pub fn new<S: Into<String>>(id: S,
-               sample_rate: usize,
-               wavetables: &'a HashMap<Waveform, Vec<Wavetable>>)
-               -> Self {
+                                sample_rate: usize,
+                                wavetables: &'a HashMap<Waveform, Vec<Wavetable>>,
+                                pitch_convert: Arc<PitchConvert>)
+                                -> Self {
         WavetableOsc {
             phase_incr: 0.0,
             sample_rate: sample_rate,
@@ -221,6 +225,7 @@ impl<'a> WavetableOsc<'a> {
             phasor: 0.0,
             waveform: Waveform::Saw,
             id: id.into(),
+            pitch_convert: pitch_convert,
             tables: wavetables,
         }
     }
