@@ -54,7 +54,7 @@ macro_rules! scale {
     ($flag:expr, $signal:expr) => {
         if $flag {
             let scale = $signal.iter().fold(0.0, |acc: Float, val| acc.max(val.re.abs()));
-            for sample in $signal.iter_mut() {
+            for sample in &mut $signal {
                 sample.re = sample.re * scale.recip();
             }
         }
