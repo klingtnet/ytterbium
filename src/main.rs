@@ -176,7 +176,7 @@ fn run(args: Args) -> Result<(), RunError> {
                                let mut adsr = dsp::ADSR::new(sample_rate);
                                let wavetables = dsp::generate_wavetables(20.0, sample_rate);
                                let mut osc = dsp::WavetableOsc::new("OSC1", sample_rate, &wavetables, pitch_convert_handle.clone());
-                               let mut buf: [Float; 32] = [0.0; 32];
+                               let mut buf: [(Float, Float); 32] = [(0.0, 0.0); 32];
 
                                init.wait();
                                loop {
@@ -188,7 +188,9 @@ fn run(args: Args) -> Result<(), RunError> {
                                            adsr.handle(&msg);
                                            osc.handle(&msg);
                                        }
-                                       *sample = osc.tick() * adsr.tick();
+                                       let osc_out = osc.tick();
+                                       let adsr_out = adsr.tick();
+                                       *sample = (osc_out.0 * adsr_out, osc_out.1 * adsr_out);
                                    }
                                    producer.write_blocking(&buf).unwrap();
                                }
@@ -221,10 +223,13 @@ fn run(args: Args) -> Result<(), RunError> {
                                     const LEN: usize = 2048;
                                     // TODO: use a length that is not smaller than 2048 for pulseaudio
                                     let len = cmp::min(LEN, min_frame_count as usize);
-                                    let mut data: Vec<Float> = vec![0.0; LEN];
+                                    let mut data: Vec<(Float, Float)> = vec![(0.0, 0.0); LEN];
                                     consumer.read_blocking(&mut data[..len]).unwrap();
-                                    let frames = vec![data[..len].iter().map(|s| *s as f32).collect(),
-                                                      data[..len].iter().map(|s| *s as f32).collect()];
+                                    let mut frames = vec![Vec::with_capacity(len), Vec::with_capacity(len)];
+                                    for &(l,r) in &data[..len] {
+                                        frames[0].push(l as f32);
+                                        frames[1].push(r as f32);
+                                    }
                                     match out.write_stream_f32(min_frame_count, &frames) {
                                         Ok(_) => (),
                                         Err(err) => println!("{}", err),

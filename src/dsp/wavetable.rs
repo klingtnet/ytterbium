@@ -204,8 +204,13 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
 pub struct WavetableOsc<'a> {
     phase_incr: Float,
     sample_rate: usize,
+    key: u8,
+    detune_hz: Float,
     phase: Float,
     phasor: Float,
+    transpose: i32, // transposition in octaves
+    volume: Float,
+    pan: (Float, Float),
     waveform: Waveform,
     id: String,
     pitch_convert: Arc<PitchConvert>,
@@ -218,11 +223,18 @@ impl<'a> WavetableOsc<'a> {
                                 wavetables: &'a HashMap<Waveform, Vec<Wavetable>>,
                                 pitch_convert: Arc<PitchConvert>)
                                 -> Self {
+        let minus_three_db = Float::from_db(-3.0);
+        let minus_six_db = minus_three_db * minus_three_db;
         WavetableOsc {
             phase_incr: 0.0,
             sample_rate: sample_rate,
+            key: 0,
+            detune_hz: 0.0, // Hz
             phase: 0.0,
             phasor: 0.0,
+            transpose: 0,
+            volume: minus_six_db,
+            pan: (minus_three_db, minus_three_db),
             waveform: Waveform::Saw,
             id: id.into(),
             pitch_convert: pitch_convert,
@@ -232,7 +244,7 @@ impl<'a> WavetableOsc<'a> {
 
     /// Sets the oscillators frequency in Hz.
     pub fn set_freq(&mut self, freq: Float) {
-        self.phase_incr = freq as Float / self.sample_rate as Float;
+        self.phase_incr = (freq * Float::powi(2.0, self.transpose)) / self.sample_rate as Float;
     }
 
     /// Sets the waveform to use.
@@ -240,14 +252,28 @@ impl<'a> WavetableOsc<'a> {
         self.waveform = waveform;
     }
 
+    pub fn set_volume(&mut self, volume: Float) {
+        let db = Float::from_db(volume);
+        self.volume = if db < -60.0 {
+            0.0
+        } else {
+            db
+        };
+    }
+
+
+    pub fn set_phase(&mut self, phase: Float) {
+        self.phase = phase;
+    }
+
     /// Returns the next sample from the oscillator.
-    pub fn tick(&mut self) -> Float {
+    pub fn tick(&mut self) -> (Float, Float) {
         let sample = self.sample(self.phasor);
         self.phasor = self.phasor + self.phase_incr;
         if self.phasor > 1.0 {
             self.phasor = self.phasor.fract(); // fractional part
         }
-        sample
+        (sample * self.volume * self.pan.0, sample * self.volume * self.pan.1)
     }
 
     /// Returns the sample from the appropriate band-limited wavetable.
@@ -269,8 +295,64 @@ impl<'a> WavetableOsc<'a> {
 impl<'a> Controllable for WavetableOsc<'a> {
     fn handle(&mut self, msg: &ControlEvent) {
         match *msg {
-            ControlEvent::NoteOn { freq, .. } => {
+            ControlEvent::NoteOn { key, .. } => {
+                self.key = key;
+                let freq = self.pitch_convert.key_to_hz(key) + self.detune_hz;
                 self.set_freq(freq);
+            }
+            ControlEvent::Waveform { ref address, waveform } => {
+                if check_address!(address, self.id) {
+                    self.set_waveform(waveform);
+                }
+            }
+            ControlEvent::Volume { ref address, volume } => {
+                if check_address!(address, self.id) {
+                    self.set_volume(volume);
+                }
+            }
+            ControlEvent::Phase { ref address, phase } => {
+                if check_address!(address, self.id) {
+                    self.set_phase(phase)
+                }
+            }
+            ControlEvent::Transpose { ref address, transpose } => {
+                if check_address!(address, self.id) {
+                    self.transpose = transpose
+                }
+            }
+            ControlEvent::Detune { ref address, detune } => {
+                if check_address!(address, self.id) {
+                    let (low, current, high) = (self.pitch_convert.key_to_hz(self.key - 1),
+                                                self.pitch_convert.key_to_hz(self.key),
+                                                self.pitch_convert.key_to_hz(self.key + 1));
+                    // linear approximation of cents
+                    let cent = if detune < 0 {
+                        (low - current)
+                    } else {
+                        (high - current)
+                    } / 100.0;
+                    self.detune_hz = (detune as Float) * cent;
+                    let detuned_freq = current + self.detune_hz;
+                    self.set_freq(detuned_freq);
+                }
+            }
+            ControlEvent::Pan { ref address, pan } => {
+                if check_address!(address, self.id) {
+                    let minus_three_db = Float::from_db(-3.0);
+                    if feq!(pan, 0.0) {
+                        self.pan.0 = minus_three_db;
+                        self.pan.1 = minus_three_db;
+                    } else {
+                        // use a quadratic panning
+                        let pan_squared = pan * pan;
+                        let mut scale = (minus_three_db, (1.0 - minus_three_db));
+                        if pan.signum() < 0.0 {
+                            scale = (scale.1, scale.0)
+                        }
+                        self.pan.0 = minus_three_db - (pan_squared * scale.0 * pan.signum());
+                        self.pan.1 = minus_three_db + (pan_squared * scale.1 * pan.signum());
+                    }
+                }
             }
             _ => (),
         }
