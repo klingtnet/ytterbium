@@ -20,6 +20,7 @@ use std::io::Write;
 
 use rb::{RB, RbProducer, RbConsumer};
 
+#[macro_use]
 mod event;
 mod io;
 mod dsp;
