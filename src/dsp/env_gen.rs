@@ -109,7 +109,7 @@ impl Controllable for ADSR {
 impl Default for ADSR {
     fn default() -> Self {
         ADSR {
-            attack: (0.05, Float::from_db(-3.0 )),
+            attack: (0.05, Float::from_db(-3.0)),
             decay: 0.25,
             sustain: Float::from_db(-12.0),
             release: 1.5,

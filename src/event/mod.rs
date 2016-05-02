@@ -64,7 +64,7 @@ pub enum ControlEvent {
     Detune {
         address: String,
         detune: i32,
-    }
+    },
 }
 
 pub trait Controllable {

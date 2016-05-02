@@ -63,8 +63,8 @@ macro_rules! scale {
 
 /// Builds wavetables for each waveform and returns a `HashMap` containing them.
 pub fn generate_wavetables(fundamental_freq: Float,
-                    sample_rate: usize)
-                    -> HashMap<Waveform, Vec<Wavetable>> {
+                           sample_rate: usize)
+                           -> HashMap<Waveform, Vec<Wavetable>> {
     let mut tables: HashMap<Waveform, Vec<Wavetable>> = HashMap::new();
     tables.insert(Waveform::Sine,
                   build_wavetables(Waveform::Sine, fundamental_freq, sample_rate));
@@ -158,7 +158,7 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
         }
         Waveform::Tri => {
             for i in (1..harmonics).filter(|i| i % 2 == 1) {
-                let sign  = if i % 4 == 1 {
+                let sign = if i % 4 == 1 {
                     1.0
                 } else {
                     -1.0
@@ -173,7 +173,7 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
         }
         Waveform::SharpTri => {
             for i in (1..harmonics).filter(|i| i % 2 == 1) {
-                let sign  = if i % 4 == 1 {
+                let sign = if i % 4 == 1 {
                     1.0
                 } else {
                     -1.0

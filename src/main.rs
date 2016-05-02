@@ -41,7 +41,6 @@ macro_rules! printerr(
     } }
 );
 
-
 struct Args {
     socket_addr_in: SocketAddr,
     socket_addr_out: SocketAddr,
