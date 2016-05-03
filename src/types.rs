@@ -1,8 +1,33 @@
 pub use std::f64::consts::PI;
+pub use std::ops;
 
 pub type Time = f32;
 /// A type alias for internal floating point precision.
 pub type Float = f64;
+
+#[derive(Debug, Clone, Copy)]
+pub struct Stereo(pub Float, pub Float);
+
+impl ops::Add<Stereo> for Stereo {
+    type Output = Stereo;
+
+    fn add(self, _rhs: Stereo) -> Self {
+        Stereo(self.0 + _rhs.0, self.1 + _rhs.1)
+    }
+}
+impl ops::Mul<Stereo> for Stereo {
+    type Output = Stereo;
+
+    fn mul(self, _rhs: Stereo) -> Self {
+        Stereo(self.0 * _rhs.0, self.1 + _rhs.1)
+    }
+}
+impl Default for Stereo {
+    fn default() -> Self {
+        Stereo(0.0, 0.0)
+    }
+}
+
 
 /// Defines conversion methods from a plain `1/x` ratio into db and vice versa.
 pub trait Db {
