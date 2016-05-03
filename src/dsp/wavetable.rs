@@ -300,28 +300,28 @@ impl<'a> Controllable for WavetableOsc<'a> {
                 let freq = self.pitch_convert.key_to_hz(key) + self.detune_hz;
                 self.set_freq(freq);
             }
-            ControlEvent::Waveform { ref address, waveform } => {
-                if check_address!(address, self.id) {
+            ControlEvent::Waveform { ref id, waveform } => {
+                if *id == self.id {
                     self.set_waveform(waveform);
                 }
             }
-            ControlEvent::Volume { ref address, volume } => {
-                if check_address!(address, self.id) {
+            ControlEvent::Volume { ref id, volume } => {
+                if *id == self.id {
                     self.set_volume(volume);
                 }
             }
-            ControlEvent::Phase { ref address, phase } => {
-                if check_address!(address, self.id) {
+            ControlEvent::Phase { ref id, phase } => {
+                if *id == self.id {
                     self.set_phase(phase)
                 }
             }
-            ControlEvent::Transpose { ref address, transpose } => {
-                if check_address!(address, self.id) {
+            ControlEvent::Transpose { ref id, transpose } => {
+                if *id == self.id {
                     self.transpose = transpose
                 }
             }
-            ControlEvent::Detune { ref address, detune } => {
-                if check_address!(address, self.id) {
+            ControlEvent::Detune { ref id, detune } => {
+                if *id == self.id {
                     let (low, current, high) = (self.pitch_convert.key_to_hz(self.key - 1),
                                                 self.pitch_convert.key_to_hz(self.key),
                                                 self.pitch_convert.key_to_hz(self.key + 1));
@@ -336,8 +336,8 @@ impl<'a> Controllable for WavetableOsc<'a> {
                     self.set_freq(detuned_freq);
                 }
             }
-            ControlEvent::Pan { ref address, pan } => {
-                if check_address!(address, self.id) {
+            ControlEvent::Pan { ref id, pan } => {
+                if *id == self.id {
                     let minus_three_db = Float::from_db(-3.0);
                     if feq!(pan, 0.0) {
                         self.pan.0 = minus_three_db;

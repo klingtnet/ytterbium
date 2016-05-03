@@ -5,16 +5,6 @@ use types::*;
 
 use dsp::Waveform;
 
-macro_rules! check_address {
-    ($address:expr, $id:expr) => {
-        if !$address.is_empty() {
-            $address[1..].starts_with(&$id)
-        } else {
-            false
-        }
-    }
-}
-
 macro_rules! feq {
     ($lhs:expr, $rhs:expr) => {
         ($lhs - $rhs).abs() < 1.0E-7
@@ -35,34 +25,34 @@ pub enum ControlEvent {
         velocity: Float,
     },
     ADSR {
-        address: String,
+        id: String,
         attack: Time,
         decay: Time,
         sustain: Float,
         release: Time,
     },
     Waveform {
-        address: String,
+        id: String,
         waveform: Waveform,
     },
     Volume {
-        address: String,
+        id: String,
         volume: Float,
     },
     Pan {
-        address: String,
+        id: String,
         pan: Float,
     },
     Phase {
-        address: String,
+        id: String,
         phase: Float,
     },
     Transpose {
-        address: String,
+        id: String,
         transpose: i32,
     },
     Detune {
-        address: String,
+        id: String,
         detune: i32,
     },
 }

@@ -133,7 +133,7 @@ impl OscReceiver {
                               })
                               .collect::<Vec<Float>>();
                 events.push(ControlEvent::ADSR {
-                    address: msg.addr.clone(),
+                    id: address[0].to_owned(),
                     attack: 10.0 * args[0] as Time,
                     decay: 20.0 * args[1] as Time,
                     sustain: Float::from_db((1.0 - args[2]) * -40.0),
@@ -144,7 +144,7 @@ impl OscReceiver {
                 let args = msg.args.as_ref().unwrap();
                 if let OscType::Float(volume) = args[0] {
                     events.push(ControlEvent::Volume {
-                        address: msg.addr.clone(),
+                        id: address[0].to_owned(),
                         volume: (1.0 - volume as Float) * -80.0,
                     });
                 }
@@ -153,7 +153,7 @@ impl OscReceiver {
                 let args = msg.args.as_ref().unwrap();
                 if let OscType::Float(phase) = args[0] {
                     events.push(ControlEvent::Phase {
-                        address: msg.addr.clone(),
+                        id: address[0].to_owned(),
                         phase: phase as Float,
                     });
                 }
@@ -162,7 +162,7 @@ impl OscReceiver {
                 let args = msg.args.as_ref().unwrap();
                 if let OscType::Float(transpose) = args[0] {
                     events.push(ControlEvent::Transpose {
-                        address: msg.addr.clone(),
+                        id: address[0].to_owned(),
                         transpose: transpose as i32,
                     });
                 }
@@ -171,7 +171,7 @@ impl OscReceiver {
                 let args = msg.args.as_ref().unwrap();
                 if let OscType::Float(detune) = args[0] {
                     events.push(ControlEvent::Detune {
-                        address: msg.addr.clone(),
+                        id: address[0].to_owned(),
                         detune: (detune * 100.0) as i32,
                     });
                 }
@@ -180,7 +180,7 @@ impl OscReceiver {
                 let args = msg.args.as_ref().unwrap();
                 if let OscType::Float(pan) = args[0] {
                     events.push(ControlEvent::Pan {
-                        address: msg.addr.clone(),
+                        id: address[0].to_owned(),
                         pan: pan as Float,
                     });
                 }
@@ -198,7 +198,7 @@ impl OscReceiver {
                         _ => None,
                     } {
                         events.push(ControlEvent::Waveform {
-                            address: msg.addr.clone(),
+                            id: address[0].to_owned(),
                             waveform: waveform,
                         })
                     }
