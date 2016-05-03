@@ -173,8 +173,23 @@ fn run(args: Args) -> Result<(), RunError> {
                            let pitch_convert_handle = pitch_convert.clone();
                            move || {
                                let wavetables = dsp::generate_wavetables(20.0, sample_rate);
-                               let mut osc = dsp::WavetableOsc::new("OSC1", sample_rate, &wavetables, pitch_convert_handle.clone());
-                               let mut buf: [(Float, Float); 32] = [(0.0, 0.0); 32];
+                               let mut osc1 = dsp::WavetableOsc::new("OSC1",
+                                                                     sample_rate,
+                                                                     &wavetables,
+                                                                     pitch_convert_handle.clone());
+                               let mut osc2 = dsp::WavetableOsc::new("OSC2",
+                                                                     sample_rate,
+                                                                     &wavetables,
+                                                                     pitch_convert_handle.clone());
+                               let mut osc3 = dsp::WavetableOsc::new("OSC3",
+                                                                     sample_rate,
+                                                                     &wavetables,
+                                                                     pitch_convert_handle.clone());
+                               let mut osc4 = dsp::WavetableOsc::new("OSC4",
+                                                                     sample_rate,
+                                                                     &wavetables,
+                                                                     pitch_convert_handle.clone());
+                               let mut buf: [Stereo; 32] = [Stereo::default(); 32];
 
                                init.wait();
                                loop {
@@ -183,9 +198,12 @@ fn run(args: Args) -> Result<(), RunError> {
                                    }
                                    for sample in &mut buf {
                                        if let Ok(msg) = rx_dsp.try_recv() {
-                                           osc.handle(&msg);
+                                           osc1.handle(&msg);
+                                           osc2.handle(&msg);
+                                           osc3.handle(&msg);
+                                           osc4.handle(&msg);
                                        }
-                                       *sample = osc.tick();
+                                       *sample = osc1.tick() + osc2.tick() + osc3.tick() + osc4.tick();
                                    }
                                    producer.write_blocking(&buf).unwrap();
                                }
@@ -218,12 +236,12 @@ fn run(args: Args) -> Result<(), RunError> {
                                     const LEN: usize = 2048;
                                     // TODO: use a length that is not smaller than 2048 for pulseaudio
                                     let len = cmp::min(LEN, min_frame_count as usize);
-                                    let mut data: Vec<(Float, Float)> = vec![(0.0, 0.0); LEN];
+                                    let mut data: Vec<Stereo> = vec![Stereo::default(); LEN];
                                     consumer.read_blocking(&mut data[..len]).unwrap();
                                     let mut frames = vec![Vec::with_capacity(len), Vec::with_capacity(len)];
-                                    for &(l,r) in &data[..len] {
-                                        frames[0].push(l as f32);
-                                        frames[1].push(r as f32);
+                                    for &frame in &data[..len] {
+                                        frames[0].push(frame.0 as f32);
+                                        frames[1].push(frame.1 as f32);
                                     }
                                     match out.write_stream_f32(min_frame_count, &frames) {
                                         Ok(_) => (),

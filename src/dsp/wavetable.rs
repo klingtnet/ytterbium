@@ -270,13 +270,14 @@ impl<'a> WavetableOsc<'a> {
     }
 
     /// Returns the next sample from the oscillator.
-    pub fn tick(&mut self) -> (Float, Float) {
+    pub fn tick(&mut self) -> Stereo {
+        let env = self.volume_envelope.tick();
         let sample = self.sample(self.phasor);
         self.phasor = self.phasor + self.phase_incr;
         if self.phasor > 1.0 {
             self.phasor = self.phasor.fract(); // fractional part
         }
-        (sample * self.volume * self.pan.0, sample * self.volume * self.pan.1)
+        Stereo(sample * env * self.volume * self.pan.0, sample * env*  self.volume * self.pan.1)
     }
 
     /// Returns the sample from the appropriate band-limited wavetable.
