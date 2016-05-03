@@ -10,6 +10,7 @@ use self::rustfft::FFT;
 use types::*;
 use io::PitchConvert;
 use event::{ControlEvent, Controllable};
+use dsp::ADSR;
 
 const OVERSAMPLING: usize = 2;
 const INVERSE: bool = true;
@@ -210,6 +211,7 @@ pub struct WavetableOsc<'a> {
     phasor: Float,
     transpose: i32, // transposition in octaves
     volume: Float,
+    volume_envelope: ADSR,
     pan: (Float, Float),
     waveform: Waveform,
     id: String,
@@ -234,6 +236,7 @@ impl<'a> WavetableOsc<'a> {
             phasor: 0.0,
             transpose: 0,
             volume: minus_six_db,
+            volume_envelope: ADSR::new(sample_rate),
             pan: (minus_three_db, minus_three_db),
             waveform: Waveform::Saw,
             id: id.into(),
@@ -299,6 +302,10 @@ impl<'a> Controllable for WavetableOsc<'a> {
                 self.key = key;
                 let freq = self.pitch_convert.key_to_hz(key) + self.detune_hz;
                 self.set_freq(freq);
+                self.volume_envelope.handle(msg);
+            }
+            ControlEvent::NoteOff { .. } => {
+                self.volume_envelope.handle(msg);
             }
             ControlEvent::Waveform { ref id, waveform } => {
                 if *id == self.id {
@@ -352,6 +359,11 @@ impl<'a> Controllable for WavetableOsc<'a> {
                         self.pan.0 = minus_three_db - (pan_squared * scale.0 * pan.signum());
                         self.pan.1 = minus_three_db + (pan_squared * scale.1 * pan.signum());
                     }
+                }
+            }
+            ControlEvent::ADSR { ref id, .. } => {
+                if *id == self.id {
+                    self.volume_envelope.handle(msg);
                 }
             }
             _ => (),

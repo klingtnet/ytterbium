@@ -172,7 +172,6 @@ fn run(args: Args) -> Result<(), RunError> {
                            let sample_rate = args.sample_rate;
                            let pitch_convert_handle = pitch_convert.clone();
                            move || {
-                               let mut adsr = dsp::ADSR::new(sample_rate);
                                let wavetables = dsp::generate_wavetables(20.0, sample_rate);
                                let mut osc = dsp::WavetableOsc::new("OSC1", sample_rate, &wavetables, pitch_convert_handle.clone());
                                let mut buf: [(Float, Float); 32] = [(0.0, 0.0); 32];
@@ -184,12 +183,9 @@ fn run(args: Args) -> Result<(), RunError> {
                                    }
                                    for sample in &mut buf {
                                        if let Ok(msg) = rx_dsp.try_recv() {
-                                           adsr.handle(&msg);
                                            osc.handle(&msg);
                                        }
-                                       let osc_out = osc.tick();
-                                       let adsr_out = adsr.tick();
-                                       *sample = (osc_out.0 * adsr_out, osc_out.1 * adsr_out);
+                                       *sample = osc.tick();
                                    }
                                    producer.write_blocking(&buf).unwrap();
                                }
