@@ -258,10 +258,14 @@ fn run(args: Args) -> Result<(), RunError> {
                                     Ok(latency) => println!("SW-latency: {:.2} ms", 1000.0*latency),
                                     Err(err) => println!("err: {}", err),
                                 }
-                                out_stream.start().unwrap();
-                                // Get handle of the current thread and park it.
-                                // The thread will be unparked when the application quits.
-                                thread::park();
+                                match out_stream.start() {
+                                    Ok(()) => {
+                                        // Get handle of the current thread and park it.
+                                        // The thread will be unparked when the application quits.
+                                        thread::park()
+                                    }
+                                    Err(err) => println!("Could not start output stream: {}", err),
+                                }
                                 sio.disconnect();
                            }
                        })
