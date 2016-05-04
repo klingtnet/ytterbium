@@ -15,11 +15,23 @@ impl ops::Add<Stereo> for Stereo {
         Stereo(self.0 + rhs.0, self.1 + rhs.1)
     }
 }
+impl ops::AddAssign<Stereo> for Stereo {
+    fn add_assign(&mut self, rhs: Stereo) {
+        self.0 += rhs.0;
+        self.1 += rhs.1;
+    }
+}
 impl ops::Mul<Stereo> for Stereo {
     type Output = Stereo;
 
     fn mul(self, rhs: Stereo) -> Self {
         Stereo(self.0 * rhs.0, self.1 * rhs.1)
+    }
+}
+impl ops::MulAssign<Stereo> for Stereo {
+    fn mul_assign(&mut self, rhs: Stereo) {
+        self.0 *= rhs.0;
+        self.1 *= rhs.1;
     }
 }
 impl ops::Mul<Float> for Stereo {
@@ -29,6 +41,13 @@ impl ops::Mul<Float> for Stereo {
         Stereo(self.0 * rhs, self.1 * rhs)
     }
 }
+impl ops::MulAssign<Float> for Stereo {
+    fn mul_assign(&mut self, rhs: Float) {
+        self.0 *= rhs;
+        self.1 *= rhs;
+    }
+}
+
 impl Default for Stereo {
     fn default() -> Self {
         Stereo(0.0, 0.0)
@@ -37,9 +56,14 @@ impl Default for Stereo {
 #[test]
 fn test_stereo() {
     let (a, b) = (Stereo(1.0, 2.0), Stereo(2.0, 4.0));
-    assert_eq!(a+b, Stereo(3.0, 6.0));
-    assert_eq!(a*b, Stereo(2.0, 8.0));
-    assert_eq!(a*3.0, Stereo(3.0, 6.0));
+    assert_eq!(a + b, Stereo(3.0, 6.0));
+    assert_eq!(a * b, Stereo(2.0, 8.0));
+    assert_eq!(a * 3.0, Stereo(3.0, 6.0));
+    let mut x = Stereo::default();
+    x += Stereo(5.0, 10.0);
+    assert_eq!(x, Stereo(5.0, 10.0));
+    x *= 0.1;
+    assert_eq!(x, Stereo(0.5, 1.0));
 }
 
 pub const MINUS_THREE_DB: Float = 0.7079457843841379;
