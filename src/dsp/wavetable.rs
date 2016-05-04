@@ -212,7 +212,7 @@ pub struct WavetableOsc<'a> {
     transpose: i32, // transposition in octaves
     volume: Float,
     volume_envelope: ADSR,
-    pan: (Float, Float),
+    pan: Stereo,
     waveform: Waveform,
     id: String,
     pitch_convert: Arc<PitchConvert>,
@@ -225,8 +225,6 @@ impl<'a> WavetableOsc<'a> {
                                 wavetables: &'a HashMap<Waveform, Vec<Wavetable>>,
                                 pitch_convert: Arc<PitchConvert>)
                                 -> Self {
-        let minus_three_db = Float::from_db(-3.0);
-        let minus_six_db = minus_three_db * minus_three_db;
         WavetableOsc {
             phase_incr: 0.0,
             sample_rate: sample_rate,
@@ -235,9 +233,9 @@ impl<'a> WavetableOsc<'a> {
             phase: 0.0,
             phasor: 0.0,
             transpose: 0,
-            volume: minus_six_db,
+            volume: MINUS_SIX_DB,
             volume_envelope: ADSR::new(sample_rate),
-            pan: (minus_three_db, minus_three_db),
+            pan: Stereo(MINUS_THREE_DB, MINUS_THREE_DB),
             waveform: Waveform::Saw,
             id: id.into(),
             pitch_convert: pitch_convert,
@@ -346,19 +344,18 @@ impl<'a> Controllable for WavetableOsc<'a> {
             }
             ControlEvent::Pan { ref id, pan } => {
                 if *id == self.id {
-                    let minus_three_db = Float::from_db(-3.0);
                     if feq!(pan, 0.0) {
-                        self.pan.0 = minus_three_db;
-                        self.pan.1 = minus_three_db;
+                        self.pan = Stereo(MINUS_THREE_DB, MINUS_THREE_DB);
                     } else {
                         // use a quadratic panning
                         let pan_squared = pan * pan;
-                        let mut scale = (minus_three_db, (1.0 - minus_three_db));
-                        if pan.signum() < 0.0 {
-                            scale = (scale.1, scale.0)
-                        }
-                        self.pan.0 = minus_three_db - (pan_squared * scale.0 * pan.signum());
-                        self.pan.1 = minus_three_db + (pan_squared * scale.1 * pan.signum());
+                        let scale = if pan.signum() < 0.0 {
+                            Stereo((1.0 - MINUS_THREE_DB), MINUS_THREE_DB)
+                            } else {
+                            Stereo(MINUS_THREE_DB, (1.0 - MINUS_THREE_DB))
+                        };
+                        let delta = Stereo(-pan_squared, pan_squared) * scale * pan.signum();
+                        self.pan = Stereo(MINUS_THREE_DB, MINUS_THREE_DB) + delta;
                     }
                 }
             }
