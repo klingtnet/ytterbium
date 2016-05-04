@@ -5,7 +5,7 @@ pub type Time = f32;
 /// A type alias for internal floating point precision.
 pub type Float = f64;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Stereo(pub Float, pub Float);
 
 impl ops::Add<Stereo> for Stereo {
@@ -26,6 +26,13 @@ impl Default for Stereo {
     fn default() -> Self {
         Stereo(0.0, 0.0)
     }
+}
+#[test]
+fn test_stereo() {
+    let (a, b) = (Stereo(1.0, 2.0), Stereo(2.0, 4.0));
+    assert_eq!(a+b, Stereo(3.0, 6.0));
+    assert_eq!(a*b, Stereo(2.0, 8.0));
+    assert_eq!(a*3.0, Stereo(3.0, 6.0));
 }
 
 
