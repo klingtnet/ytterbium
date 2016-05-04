@@ -130,6 +130,8 @@ impl Default for ADSR {
     }
 }
 
+const TEST_EPSILON: Float = 0.02; // -34dB
+
 #[test]
 fn test_state_change() {
     let sample_rate = 48_000;
@@ -163,7 +165,7 @@ fn test_state_change() {
         ticks -= 1;
     }
     assert_eq!(adsr.state(), ADSRState::Sustain);
-    assert_relative_eq!(adsr.tick(), Float::from_db(-16.0), epsilon = Float::from_db(0.1));
+    assert_relative_eq!(adsr.tick(), adsr.sustain, epsilon = TEST_EPSILON);
     adsr.handle(&ControlEvent::NoteOff {
         key:0,
         velocity: 0.0,
