@@ -61,6 +61,10 @@ impl ADSR {
         }
     }
 
+    fn state(&self) -> ADSRState {
+        self.state
+    }
+
     fn state_change(&mut self, state: ADSRState) {
         if state == self.state {
             return;
