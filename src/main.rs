@@ -33,6 +33,7 @@ use errors::RunError;
 
 const MAX_VOICES: usize = 24;
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const BUF_SIZE: usize = 2048;
 
 macro_rules! printerr(
     ($($arg:tt)*) => { {
@@ -125,7 +126,7 @@ fn main() {
 }
 
 fn run(args: Args) -> Result<(), RunError> {
-    let buf = rb::SpscRb::new(4096);
+    let buf = rb::SpscRb::new(BUF_SIZE);
     let (producer, consumer) = (buf.producer(), buf.consumer());
     let (tx_receiver, rx_dsp) = mpsc::channel();
     let audio_init = Arc::new(Barrier::new(1));
@@ -189,7 +190,8 @@ fn run(args: Args) -> Result<(), RunError> {
                                                                      sample_rate,
                                                                      &wavetables,
                                                                      pitch_convert_handle.clone());
-                               let mut buf: [Stereo; 32] = [Stereo::default(); 32];
+                               let mut buf: [Stereo; BUF_SIZE / 16] = [Stereo::default(); BUF_SIZE /
+                                                                                          16];
 
                                init.wait();
                                loop {
@@ -228,25 +230,24 @@ fn run(args: Args) -> Result<(), RunError> {
                                 out_stream.set_format(rsoundio::SioFormat::Float32LE).unwrap();
                                 out_stream.set_sample_rate(sample_rate);
 
-                                init.wait();
-                                out_stream.register_write_callback(|out: rsoundio::OutStream,
-                                                                  min_frame_count: u32,
-                                                                  max_frame_count: u32| {
-                                    const LEN: usize = 2048;
-                                    // TODO: use a length that is not smaller than 2048 for pulseaudio
-                                    let len = cmp::min(LEN, min_frame_count as usize);
-                                    let mut data: Vec<Stereo> = vec![Stereo::default(); LEN];
-                                    consumer.read_blocking(&mut data[..len]).unwrap();
-                                    let mut frames = vec![Vec::with_capacity(len), Vec::with_capacity(len)];
-                                    for &frame in &data[..len] {
-                                        frames[0].push(frame.0 as f32);
-                                        frames[1].push(frame.1 as f32);
-                                    }
-                                    match out.write_stream_f32(min_frame_count, &frames) {
-                                        Ok(_) => (),
-                                        Err(err) => println!("{}", err),
-                                    }
-                                });
+                               init.wait();
+                               out_stream.register_write_callback(|out: rsoundio::OutStream,
+                                                                   min_frame_count: u32,
+                                                                   max_frame_count: u32| {
+                                   let len = cmp::min(BUF_SIZE, max_frame_count as usize);
+                                   let mut data: Vec<Stereo> = vec![Stereo::default(); BUF_SIZE];
+                                   consumer.read_blocking(&mut data[..len]).unwrap();
+                                   let mut frames = vec![Vec::with_capacity(len),
+                                                         Vec::with_capacity(len)];
+                                   for &frame in &data[..len] {
+                                       frames[0].push(frame.0 as f32);
+                                       frames[1].push(frame.1 as f32);
+                                   }
+                                   match out.write_stream_f32(min_frame_count, &frames) {
+                                       Ok(_) => (),
+                                       Err(err) => println!("{}", err),
+                                   }
+                               });
 
                                 out_stream.register_underflow_callback(|out: rsoundio::OutStream| {
                                     println!("Underflow in {} occured!", out.name().unwrap())
