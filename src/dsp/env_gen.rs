@@ -177,3 +177,105 @@ fn test_state_change() {
     }
     assert_eq!(adsr.state(), ADSRState::Off);
 }
+
+#[test]
+fn test_short_envelope() {
+    let sample_rate = 48_000;
+    let mut adsr = ADSR::new(sample_rate);
+    assert_eq!(adsr.state(), ADSRState::Off);
+    // setup ADSR parameters
+    adsr.handle(&ControlEvent::ADSR{
+        id: "".to_owned(),
+        attack: 0.01,
+        decay: 0.01,
+        sustain: Float::from_db(-16.0),
+        release: 0.01,
+    });
+    // initialize envelope
+    adsr.handle(&ControlEvent::NoteOn{
+        key: 0,
+        freq: 0.0,
+        velocity: 1.0,
+    });
+    assert_eq!(adsr.state(), ADSRState::Attack);
+    // the state change is active in the n+1 tick
+    let mut ticks = (adsr.attack.0 * sample_rate as Time) as isize + 1;
+    let mut level = 0.0;
+    while ticks > 0 {
+        level = adsr.tick();
+        ticks -= 1;
+    }
+    assert_eq!(adsr.state(), ADSRState::Decay);
+    assert_relative_eq!(level, Float::from_db(-3.0), epsilon = TEST_EPSILON);
+    ticks = (adsr.decay * sample_rate as Time) as isize + 1;
+    while ticks > 0 {
+        level = adsr.tick();
+        ticks -= 1;
+    }
+    assert_eq!(adsr.state(), ADSRState::Sustain);
+    assert_relative_eq!(level, adsr.sustain, epsilon = TEST_EPSILON);
+    adsr.handle(&ControlEvent::NoteOff {
+        key:0,
+        velocity: 0.0,
+    });
+    ticks = (adsr.release * sample_rate as Time) as isize;
+    while ticks > 0 {
+        level = adsr.tick();
+        ticks -= 1;
+    }
+    assert_relative_eq!(level, 0.0, epsilon = TEST_EPSILON);
+    level = adsr.tick();
+    assert_eq!(adsr.state(), ADSRState::Off);
+    assert_relative_eq!(level, 0.0);
+}
+
+#[test]
+fn test_long_envelope() {
+    let sample_rate = 48_000;
+    let mut adsr = ADSR::new(sample_rate);
+    assert_eq!(adsr.state(), ADSRState::Off);
+    // setup ADSR parameters
+    adsr.handle(&ControlEvent::ADSR{
+        id: "".to_owned(),
+        attack: 10.0,
+        decay: 20.0,
+        sustain: Float::from_db(-24.0),
+        release: 30.0,
+    });
+    // initialize envelope
+    adsr.handle(&ControlEvent::NoteOn{
+        key: 0,
+        freq: 0.0,
+        velocity: 1.0,
+    });
+    assert_eq!(adsr.state(), ADSRState::Attack);
+    // the state change is active in the n+1 tick
+    let mut ticks = (adsr.attack.0 * sample_rate as Time) as isize + 1;
+    let mut level = 0.0;
+    while ticks > 0 {
+        level = adsr.tick();
+        ticks -= 1;
+    }
+    assert_eq!(adsr.state(), ADSRState::Decay);
+    assert_relative_eq!(level, Float::from_db(-3.0), epsilon = TEST_EPSILON);
+    ticks = (adsr.decay * sample_rate as Time) as isize + 1;
+    while ticks > 0 {
+        level = adsr.tick();
+        ticks -= 1;
+    }
+    assert_eq!(adsr.state(), ADSRState::Sustain);
+    assert_relative_eq!(level, adsr.sustain, epsilon = TEST_EPSILON);
+    adsr.handle(&ControlEvent::NoteOff {
+        key:0,
+        velocity: 0.0,
+    });
+    ticks = (adsr.release * sample_rate as Time) as isize;
+    while ticks > 0 {
+        level = adsr.tick();
+        ticks -= 1;
+    }
+    assert_relative_eq!(level, 0.0, epsilon = TEST_EPSILON);
+    level = adsr.tick();
+    assert_eq!(adsr.state(), ADSRState::Off);
+    assert_relative_eq!(level, 0.0);
+}
