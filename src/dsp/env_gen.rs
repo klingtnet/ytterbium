@@ -129,3 +129,49 @@ impl Default for ADSR {
         }
     }
 }
+
+#[test]
+fn test_state_change() {
+    let sample_rate = 48_000;
+    let mut adsr = ADSR::new(sample_rate);
+    assert_eq!(adsr.state(), ADSRState::Off);
+    // setup ADSR parameters
+    adsr.handle(&ControlEvent::ADSR{
+        id: "".to_owned(),
+        attack: 0.1,
+        decay: 0.3,
+        sustain: Float::from_db(-16.0),
+        release: 2.0,
+    });
+    // initialize envelope
+    adsr.handle(&ControlEvent::NoteOn{
+        key: 0,
+        freq: 0.0,
+        velocity: 1.0,
+    });
+    assert_eq!(adsr.state(), ADSRState::Attack);
+    // the state change is active in the n+1 tick
+    let mut ticks = (adsr.attack.0 * sample_rate as Time) as isize + 1;
+    while ticks > 0 {
+        adsr.tick();
+        ticks -= 1;
+    }
+    assert_eq!(adsr.state(), ADSRState::Decay);
+    ticks = (adsr.decay * sample_rate as Time) as isize + 1;
+    while ticks > 0 {
+        adsr.tick();
+        ticks -= 1;
+    }
+    assert_eq!(adsr.state(), ADSRState::Sustain);
+    assert_relative_eq!(adsr.tick(), Float::from_db(-16.0), epsilon = Float::from_db(0.1));
+    adsr.handle(&ControlEvent::NoteOff {
+        key:0,
+        velocity: 0.0,
+    });
+    ticks = (adsr.release * sample_rate as Time) as isize + 1;
+    while ticks > 0 {
+        adsr.tick();
+        ticks -= 1;
+    }
+    assert_eq!(adsr.state(), ADSRState::Off);
+}
