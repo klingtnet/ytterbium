@@ -19,7 +19,7 @@ impl ops::Mul<Stereo> for Stereo {
     type Output = Stereo;
 
     fn mul(self, rhs: Stereo) -> Self {
-        Stereo(self.0 * rhs.0, self.1 + rhs.1)
+        Stereo(self.0 * rhs.0, self.1 * rhs.1)
     }
 }
 impl Default for Stereo {
