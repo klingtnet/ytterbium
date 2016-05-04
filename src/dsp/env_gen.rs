@@ -51,10 +51,12 @@ impl ADSR {
                 if self.ticks_left == 0 {
                     let next_state = self.state.progress();
                     self.state_change(next_state);
+                    self.tick()
+                } else {
+                    self.level = self.target_level * self.gain + (1.0 - self.gain) * self.level;
+                    self.ticks_left -= 1;
+                    self.level
                 }
-                self.level = self.target_level * self.gain + (1.0 - self.gain) * self.level;
-                self.ticks_left -= 1;
-                self.level
             }
         }
     }
