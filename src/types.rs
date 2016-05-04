@@ -42,6 +42,8 @@ fn test_stereo() {
     assert_eq!(a*3.0, Stereo(3.0, 6.0));
 }
 
+pub const MINUS_THREE_DB: Float = 0.7079457843841379;
+pub const MINUS_SIX_DB: Float = MINUS_THREE_DB * MINUS_THREE_DB;
 
 /// Defines conversion methods from a plain `1/x` ratio into db and vice versa.
 pub trait Db {
@@ -70,5 +72,6 @@ fn test_conversion() {
     assert_relative_eq!(-80.0, Float::to_db(0.0001));
     assert_relative_eq!(0.0, Float::to_db(1.0));
     assert_relative_eq!(6.0, Float::to_db(2.0), epsilon = 0.03);
-    assert_relative_eq!(0.5, Float::from_db(-6.0), epsilon = 0.015);
+    assert_relative_eq!(MINUS_SIX_DB, Float::from_db(-6.0));
+    assert_relative_eq!(MINUS_THREE_DB, Float::from_db(-3.0));
 }
