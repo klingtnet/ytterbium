@@ -12,7 +12,7 @@ pub enum ADSRState {
     Off,
 }
 impl ADSRState {
-    fn next(&self) -> ADSRState {
+    fn progress(&self) -> ADSRState {
         match *self {
             ADSRState::Attack => ADSRState::Decay,
             ADSRState::Decay => ADSRState::Sustain,
@@ -49,7 +49,7 @@ impl ADSR {
             ADSRState::Sustain => self.level,
             _ => {
                 if self.ticks_left == 0 {
-                    let next_state = self.state.next();
+                    let next_state = self.state.progress();
                     self.state_change(next_state);
                 }
                 self.level = self.target_level * self.gain + (1.0 - self.gain) * self.level;
