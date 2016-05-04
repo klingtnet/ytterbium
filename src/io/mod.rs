@@ -13,6 +13,8 @@ pub trait Receiver {
     fn receive_and_send(&mut self, mpsc::Sender<ControlEvent>);
 }
 
+pub const CONCERT_A: Float = 440.0;
+
 pub struct PitchConvert {
     table: Vec<Float>,
 }
