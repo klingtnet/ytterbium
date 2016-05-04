@@ -138,7 +138,7 @@ fn test_state_change() {
     let mut adsr = ADSR::new(sample_rate);
     assert_eq!(adsr.state(), ADSRState::Off);
     // setup ADSR parameters
-    adsr.handle(&ControlEvent::ADSR{
+    adsr.handle(&ControlEvent::ADSR {
         id: "".to_owned(),
         attack: 0.1,
         decay: 0.3,
@@ -146,7 +146,7 @@ fn test_state_change() {
         release: 2.0,
     });
     // initialize envelope
-    adsr.handle(&ControlEvent::NoteOn{
+    adsr.handle(&ControlEvent::NoteOn {
         key: 0,
         freq: 0.0,
         velocity: 1.0,
@@ -167,7 +167,7 @@ fn test_state_change() {
     assert_eq!(adsr.state(), ADSRState::Sustain);
     assert_relative_eq!(adsr.tick(), adsr.sustain, epsilon = TEST_EPSILON);
     adsr.handle(&ControlEvent::NoteOff {
-        key:0,
+        key: 0,
         velocity: 0.0,
     });
     ticks = (adsr.release * sample_rate as Time) as isize + 1;
@@ -184,7 +184,7 @@ fn test_short_envelope() {
     let mut adsr = ADSR::new(sample_rate);
     assert_eq!(adsr.state(), ADSRState::Off);
     // setup ADSR parameters
-    adsr.handle(&ControlEvent::ADSR{
+    adsr.handle(&ControlEvent::ADSR {
         id: "".to_owned(),
         attack: 0.01,
         decay: 0.01,
@@ -192,7 +192,7 @@ fn test_short_envelope() {
         release: 0.01,
     });
     // initialize envelope
-    adsr.handle(&ControlEvent::NoteOn{
+    adsr.handle(&ControlEvent::NoteOn {
         key: 0,
         freq: 0.0,
         velocity: 1.0,
@@ -215,7 +215,7 @@ fn test_short_envelope() {
     assert_eq!(adsr.state(), ADSRState::Sustain);
     assert_relative_eq!(level, adsr.sustain, epsilon = TEST_EPSILON);
     adsr.handle(&ControlEvent::NoteOff {
-        key:0,
+        key: 0,
         velocity: 0.0,
     });
     ticks = (adsr.release * sample_rate as Time) as isize;
@@ -235,7 +235,7 @@ fn test_long_envelope() {
     let mut adsr = ADSR::new(sample_rate);
     assert_eq!(adsr.state(), ADSRState::Off);
     // setup ADSR parameters
-    adsr.handle(&ControlEvent::ADSR{
+    adsr.handle(&ControlEvent::ADSR {
         id: "".to_owned(),
         attack: 10.0,
         decay: 20.0,
@@ -243,7 +243,7 @@ fn test_long_envelope() {
         release: 30.0,
     });
     // initialize envelope
-    adsr.handle(&ControlEvent::NoteOn{
+    adsr.handle(&ControlEvent::NoteOn {
         key: 0,
         freq: 0.0,
         velocity: 1.0,
@@ -266,7 +266,7 @@ fn test_long_envelope() {
     assert_eq!(adsr.state(), ADSRState::Sustain);
     assert_relative_eq!(level, adsr.sustain, epsilon = TEST_EPSILON);
     adsr.handle(&ControlEvent::NoteOff {
-        key:0,
+        key: 0,
         velocity: 0.0,
     });
     ticks = (adsr.release * sample_rate as Time) as isize;
