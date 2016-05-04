@@ -22,6 +22,13 @@ impl ops::Mul<Stereo> for Stereo {
         Stereo(self.0 * rhs.0, self.1 * rhs.1)
     }
 }
+impl ops::Mul<Float> for Stereo {
+    type Output = Stereo;
+
+    fn mul(self, rhs: Float) -> Self {
+        Stereo(self.0 * rhs, self.1 * rhs)
+    }
+}
 impl Default for Stereo {
     fn default() -> Self {
         Stereo(0.0, 0.0)
