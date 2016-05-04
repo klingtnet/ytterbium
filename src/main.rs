@@ -205,7 +205,8 @@ fn run(args: Args) -> Result<(), RunError> {
                                            osc3.handle(&msg);
                                            osc4.handle(&msg);
                                        }
-                                       *sample = osc1.tick() + osc2.tick() + osc3.tick() + osc4.tick();
+                                       *sample = osc1.tick() + osc2.tick() + osc3.tick() +
+                                                 osc4.tick();
                                    }
                                    producer.write_blocking(&buf).unwrap();
                                }
@@ -220,15 +221,15 @@ fn run(args: Args) -> Result<(), RunError> {
                            let init = audio_init.clone();
                            let sample_rate = args.sample_rate as u32;
                            move || {
-                                let sio = rsoundio::SoundIo::new("ytterbium");
-                                // connect to default backend
-                                sio.connect().unwrap();
-                                sio.flush_events();
-                                let dev = sio.default_output_device().unwrap();
-                                let mut out_stream = dev.create_outstream().unwrap();
-                                out_stream.set_name("ytterbium").ok();
-                                out_stream.set_format(rsoundio::SioFormat::Float32LE).unwrap();
-                                out_stream.set_sample_rate(sample_rate);
+                               let sio = rsoundio::SoundIo::new("ytterbium");
+                               // connect to default backend
+                               sio.connect().unwrap();
+                               sio.flush_events();
+                               let dev = sio.default_output_device().unwrap();
+                               let mut out_stream = dev.create_outstream().unwrap();
+                               out_stream.set_name("ytterbium").ok();
+                               out_stream.set_format(rsoundio::SioFormat::Float32LE).unwrap();
+                               out_stream.set_sample_rate(sample_rate);
 
                                init.wait();
                                out_stream.register_write_callback(|out: rsoundio::OutStream,
@@ -249,24 +250,26 @@ fn run(args: Args) -> Result<(), RunError> {
                                    }
                                });
 
-                                out_stream.register_underflow_callback(|out: rsoundio::OutStream| {
-                                    println!("Underflow in {} occured!", out.name().unwrap())
-                                });
-                                out_stream.open().unwrap();
-                                out_stream.set_latency(4096.0 / sample_rate as Float);
-                                match out_stream.latency() {
-                                    Ok(latency) => println!("SW-latency: {:.2} ms", 1000.0*latency),
-                                    Err(err) => println!("err: {}", err),
-                                }
-                                match out_stream.start() {
-                                    Ok(()) => {
-                                        // Get handle of the current thread and park it.
-                                        // The thread will be unparked when the application quits.
-                                        thread::park()
-                                    }
-                                    Err(err) => println!("Could not start output stream: {}", err),
-                                }
-                                sio.disconnect();
+                               out_stream.register_underflow_callback(|out: rsoundio::OutStream| {
+                                   println!("Underflow in {} occured!", out.name().unwrap())
+                               });
+                               out_stream.open().unwrap();
+                               out_stream.set_latency(4096.0 / sample_rate as Float);
+                               match out_stream.latency() {
+                                   Ok(latency) => {
+                                       println!("SW-latency: {:.2} ms", 1000.0 * latency)
+                                   }
+                                   Err(err) => println!("err: {}", err),
+                               }
+                               match out_stream.start() {
+                                   Ok(()) => {
+                                       // Get handle of the current thread and park it.
+                                       // The thread will be unparked when the application quits.
+                                       thread::park()
+                                   }
+                                   Err(err) => println!("Could not start output stream: {}", err),
+                               }
+                               sio.disconnect();
                            }
                        })
                        .unwrap());
