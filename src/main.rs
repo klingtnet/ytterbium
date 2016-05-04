@@ -218,8 +218,7 @@ fn run(args: Args) -> Result<(), RunError> {
                            let init = audio_init.clone();
                            let sample_rate = args.sample_rate as u32;
                            move || {
-                                let mut sio = rsoundio::SoundIo::new();
-                                sio.set_name("ytterbium").unwrap();
+                                let mut sio = rsoundio::SoundIo::new("ytterbium");
                                 // connect to default backend
                                 sio.connect().unwrap();
                                 sio.flush_events();
