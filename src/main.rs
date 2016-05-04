@@ -198,7 +198,7 @@ fn run(args: Args) -> Result<(), RunError> {
                                    if quit.load(Ordering::Relaxed) {
                                        break;
                                    }
-                                   for sample in &mut buf {
+                                   for sample in buf.iter_mut() {
                                        if let Ok(msg) = rx_dsp.try_recv() {
                                            osc1.handle(&msg);
                                            osc2.handle(&msg);
