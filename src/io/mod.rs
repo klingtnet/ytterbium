@@ -40,3 +40,8 @@ impl PitchConvert {
         }
     }
 }
+impl Default for PitchConvert {
+    fn default() -> Self {
+        PitchConvert::new(CONCERT_A)
+    }
+}
