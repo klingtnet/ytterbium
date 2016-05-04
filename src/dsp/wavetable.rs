@@ -275,7 +275,7 @@ impl<'a> WavetableOsc<'a> {
         if self.phasor > 1.0 {
             self.phasor = self.phasor.fract(); // fractional part
         }
-        Stereo(sample * env * self.volume * self.pan.0, sample * env*  self.volume * self.pan.1)
+        Stereo(sample, sample) * self.volume * self.pan * env
     }
 
     /// Returns the sample from the appropriate band-limited wavetable.
