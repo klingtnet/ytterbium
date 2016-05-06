@@ -17,7 +17,6 @@ pub enum ControlEvent {
     Unsupported,
     NoteOn {
         key: u8,
-        freq: Float,
         velocity: Float,
     },
     NoteOff {

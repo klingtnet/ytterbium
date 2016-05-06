@@ -131,7 +131,6 @@ fn run(args: Args) -> Result<(), RunError> {
     let (tx_receiver, rx_dsp) = mpsc::channel();
     let audio_init = Arc::new(Barrier::new(1));
     let mut handles = HashMap::with_capacity(5);
-    let pitch_convert = Arc::new(io::PitchConvert::new(440.0));
     let quit = Arc::new(AtomicBool::new(false));
 
     handles.insert("osc",
@@ -140,11 +139,8 @@ fn run(args: Args) -> Result<(), RunError> {
                        .spawn({
                            let tx = tx_receiver.clone();
                            let socket_addr = args.socket_addr_in;
-                           let pitch_convert_handle = pitch_convert.clone();
                            move || {
-                               let mut osc_receiver = OscReceiver::new(socket_addr,
-                                                                       pitch_convert_handle)
-                                                          .unwrap();
+                               let mut osc_receiver = OscReceiver::new(socket_addr).unwrap();
                                osc_receiver.receive_and_send(tx)
                            }
                        })
@@ -155,10 +151,8 @@ fn run(args: Args) -> Result<(), RunError> {
                        .name("midi".to_owned())
                        .spawn({
                            let tx = tx_receiver.clone();
-                           let pitch_convert_handle = pitch_convert.clone();
                            move || {
-                               let mut midi_receiver = MidiReceiver::new(pitch_convert_handle)
-                                                           .unwrap();
+                               let mut midi_receiver = MidiReceiver::new().unwrap();
                                midi_receiver.receive_and_send(tx)
                            }
                        })

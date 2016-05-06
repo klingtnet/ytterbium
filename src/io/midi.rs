@@ -2,11 +2,11 @@ extern crate portmidi;
 
 use types::*;
 use errors::RunError;
-use std::sync::{Arc, mpsc};
+use std::sync::mpsc;
 use std::time::Duration;
 use std::thread;
 
-use io::{Receiver, PitchConvert};
+use io::Receiver;
 
 use event::ControlEvent;
 
@@ -14,10 +14,9 @@ pub struct MidiReceiver {
     context: portmidi::PortMidi,
     in_ports: Vec<portmidi::InputPort>,
     buf_len: usize,
-    pitch_convert: Arc<PitchConvert>,
 }
 impl MidiReceiver {
-    pub fn new(pitch_convert: Arc<PitchConvert>) -> Result<Self, RunError> {
+    pub fn new() -> Result<Self, RunError> {
         const BUF_LEN: usize = 1024;
         let context = try!(portmidi::PortMidi::new().map_err(RunError::MidiError));
         let in_devices = context.devices()
@@ -38,7 +37,6 @@ impl MidiReceiver {
                 context: context,
                 in_ports: in_ports,
                 buf_len: BUF_LEN,
-                pitch_convert: pitch_convert,
             })
         }
     }
@@ -55,7 +53,6 @@ impl MidiReceiver {
             MidiEvent::NoteOn { key, velocity, .. } => {
                 ControlEvent::NoteOn {
                     key: key,
-                    freq: self.pitch_convert.key_to_hz(key),
                     velocity: velocity,
                 }
             }

@@ -4,9 +4,9 @@ use rosc::{OscPacket, OscMessage, OscType};
 
 use errors::RunError;
 use std::net::{UdpSocket, SocketAddr};
-use std::sync::{Arc, mpsc};
+use std::sync::mpsc;
 
-use io::{Receiver, PitchConvert};
+use io::Receiver;
 
 use event::ControlEvent;
 use dsp::Waveform;
@@ -23,17 +23,15 @@ pub struct OscReceiver {
     buf: [u8; rosc::decoder::MTU],
     transpose: u8,
     note_grid: [f32; 128],
-    pitch_convert: Arc<PitchConvert>,
 }
 impl OscReceiver {
-    pub fn new(addr: SocketAddr, pitch_convert: Arc<PitchConvert>) -> Result<Self, RunError> {
+    pub fn new(addr: SocketAddr) -> Result<Self, RunError> {
         let socket = try!(UdpSocket::bind(addr).map_err(RunError::IoError));
         Ok(OscReceiver {
             socket: socket,
             buf: [0u8; rosc::decoder::MTU],
             transpose: 0u8,
             note_grid: [0.0; 128],
-            pitch_convert: pitch_convert,
         })
     }
 }
@@ -87,7 +85,6 @@ impl OscReceiver {
                         if velocity > old_velocity {
                             events.push(ControlEvent::NoteOn {
                                 key: transposed_key,
-                                freq: self.pitch_convert.key_to_hz(transposed_key + 1),
                                 velocity: velocity as Float,
                             });
                         } else {
