@@ -259,7 +259,6 @@ impl WavetableOsc {
         };
     }
 
-
     pub fn set_phase(&mut self, phase: Float) {
         self.phase = phase;
     }

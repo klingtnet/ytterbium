@@ -11,7 +11,6 @@ macro_rules! feq {
     }
 }
 
-
 #[derive(Debug,Clone)]
 pub enum ControlEvent {
     Unsupported,
