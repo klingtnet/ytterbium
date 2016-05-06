@@ -61,7 +61,7 @@ impl ADSR {
         }
     }
 
-    fn state(&self) -> ADSRState {
+    pub fn state(&self) -> ADSRState {
         self.state
     }
 
@@ -148,7 +148,6 @@ fn test_state_change() {
     // initialize envelope
     adsr.handle(&ControlEvent::NoteOn {
         key: 0,
-        freq: 0.0,
         velocity: 1.0,
     });
     assert_eq!(adsr.state(), ADSRState::Attack);
@@ -194,7 +193,6 @@ fn test_short_envelope() {
     // initialize envelope
     adsr.handle(&ControlEvent::NoteOn {
         key: 0,
-        freq: 0.0,
         velocity: 1.0,
     });
     assert_eq!(adsr.state(), ADSRState::Attack);
@@ -245,7 +243,6 @@ fn test_long_envelope() {
     // initialize envelope
     adsr.handle(&ControlEvent::NoteOn {
         key: 0,
-        freq: 0.0,
         velocity: 1.0,
     });
     assert_eq!(adsr.state(), ADSRState::Attack);

@@ -3,14 +3,13 @@ extern crate num;
 extern crate rand;
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::rc::Rc;
 use self::num::{Complex, Zero};
 use self::rustfft::FFT;
 
 use types::*;
 use io::PitchConvert;
 use event::{ControlEvent, Controllable};
-use dsp::ADSR;
 
 const OVERSAMPLING: usize = 2;
 const INVERSE: bool = true;
@@ -202,7 +201,7 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
 }
 
 /// A band-limited wavetable oscillator.
-pub struct WavetableOsc<'a> {
+pub struct WavetableOsc {
     phase_incr: Float,
     sample_rate: usize,
     key: u8,
@@ -211,19 +210,18 @@ pub struct WavetableOsc<'a> {
     phasor: Float,
     transpose: i32, // transposition in octaves
     volume: Float,
-    volume_envelope: ADSR,
     pan: Stereo,
     waveform: Waveform,
     id: String,
-    pitch_convert: Arc<PitchConvert>,
-    tables: &'a HashMap<Waveform, Vec<Wavetable>>,
+    pitch_convert: Rc<PitchConvert>,
+    tables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
 }
-impl<'a> WavetableOsc<'a> {
+impl WavetableOsc {
     /// Constructs a wavetable oscillator for the given sample rate.
     pub fn new<S: Into<String>>(id: S,
                                 sample_rate: usize,
-                                wavetables: &'a HashMap<Waveform, Vec<Wavetable>>,
-                                pitch_convert: Arc<PitchConvert>)
+                                wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
+                                pitch_convert: Rc<PitchConvert>)
                                 -> Self {
         WavetableOsc {
             phase_incr: 0.0,
@@ -233,10 +231,9 @@ impl<'a> WavetableOsc<'a> {
             phase: 0.0,
             phasor: 0.0,
             transpose: 0,
-            volume: MINUS_SIX_DB,
-            volume_envelope: ADSR::new(sample_rate),
+            volume: MINUS_SIX_DB * MINUS_SIX_DB,
             pan: Stereo(MINUS_THREE_DB, MINUS_THREE_DB),
-            waveform: Waveform::Saw,
+            waveform: Waveform::Sine,
             id: id.into(),
             pitch_convert: pitch_convert,
             tables: wavetables,
@@ -269,13 +266,12 @@ impl<'a> WavetableOsc<'a> {
 
     /// Returns the next sample from the oscillator.
     pub fn tick(&mut self) -> Stereo {
-        let env = self.volume_envelope.tick();
         let sample = self.sample(self.phasor);
         self.phasor = self.phasor + self.phase_incr;
         if self.phasor > 1.0 {
             self.phasor = self.phasor.fract(); // fractional part
         }
-        Stereo(sample, sample) * self.volume * self.pan * env
+        Stereo(sample, sample) * self.volume * self.pan
     }
 
     /// Returns the sample from the appropriate band-limited wavetable.
@@ -294,17 +290,13 @@ impl<'a> WavetableOsc<'a> {
     }
 }
 
-impl<'a> Controllable for WavetableOsc<'a> {
+impl Controllable for WavetableOsc {
     fn handle(&mut self, msg: &ControlEvent) {
         match *msg {
             ControlEvent::NoteOn { key, .. } => {
                 self.key = key;
                 let freq = self.pitch_convert.key_to_hz(key) + self.detune_hz;
                 self.set_freq(freq);
-                self.volume_envelope.handle(msg);
-            }
-            ControlEvent::NoteOff { .. } => {
-                self.volume_envelope.handle(msg);
             }
             ControlEvent::Waveform { ref id, waveform } => {
                 if *id == self.id {
@@ -351,17 +343,12 @@ impl<'a> Controllable for WavetableOsc<'a> {
                         let pan_squared = pan * pan;
                         let scale = if pan.signum() < 0.0 {
                             Stereo((1.0 - MINUS_THREE_DB), MINUS_THREE_DB)
-                            } else {
+                        } else {
                             Stereo(MINUS_THREE_DB, (1.0 - MINUS_THREE_DB))
                         };
                         let delta = Stereo(-pan_squared, pan_squared) * scale * pan.signum();
                         self.pan = Stereo(MINUS_THREE_DB, MINUS_THREE_DB) + delta;
                     }
-                }
-            }
-            ControlEvent::ADSR { ref id, .. } => {
-                if *id == self.id {
-                    self.volume_envelope.handle(msg);
                 }
             }
             _ => (),

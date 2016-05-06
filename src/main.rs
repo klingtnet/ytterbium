@@ -27,6 +27,7 @@ mod dsp;
 mod types;
 mod errors;
 use io::{Receiver, OscReceiver, MidiReceiver};
+use dsp::VoiceManager;
 use event::Controllable;
 use types::*;
 use errors::RunError;
@@ -165,28 +166,10 @@ fn run(args: Args) -> Result<(), RunError> {
                            let init = audio_init.clone();
                            let quit = quit.clone();
                            let sample_rate = args.sample_rate;
-                           let pitch_convert_handle = pitch_convert.clone();
                            move || {
-                               let wavetables = dsp::generate_wavetables(20.0, sample_rate);
-                               let mut osc1 = dsp::WavetableOsc::new("OSC1",
-                                                                     sample_rate,
-                                                                     &wavetables,
-                                                                     pitch_convert_handle.clone());
-                               let mut osc2 = dsp::WavetableOsc::new("OSC2",
-                                                                     sample_rate,
-                                                                     &wavetables,
-                                                                     pitch_convert_handle.clone());
-                               let mut osc3 = dsp::WavetableOsc::new("OSC3",
-                                                                     sample_rate,
-                                                                     &wavetables,
-                                                                     pitch_convert_handle.clone());
-                               let mut osc4 = dsp::WavetableOsc::new("OSC4",
-                                                                     sample_rate,
-                                                                     &wavetables,
-                                                                     pitch_convert_handle.clone());
                                let mut buf: [Stereo; BUF_SIZE / 16] = [Stereo::default(); BUF_SIZE /
                                                                                           16];
-
+                               let mut voice_manager = VoiceManager::new(MAX_VOICES, sample_rate);
                                init.wait();
                                loop {
                                    if quit.load(Ordering::Relaxed) {
@@ -194,13 +177,9 @@ fn run(args: Args) -> Result<(), RunError> {
                                    }
                                    for sample in buf.iter_mut() {
                                        if let Ok(msg) = rx_dsp.try_recv() {
-                                           osc1.handle(&msg);
-                                           osc2.handle(&msg);
-                                           osc3.handle(&msg);
-                                           osc4.handle(&msg);
+                                           voice_manager.handle(&msg);
                                        }
-                                       *sample = osc1.tick() + osc2.tick() + osc3.tick() +
-                                                 osc4.tick();
+                                       *sample = voice_manager.tick();
                                    }
                                    producer.write_blocking(&buf).unwrap();
                                }
