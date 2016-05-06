@@ -4,3 +4,4 @@ target/
 .vscode/
 *.wav
 *.swp
+vim.session
