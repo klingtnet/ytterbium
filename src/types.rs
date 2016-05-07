@@ -68,6 +68,20 @@ impl ops::MulAssign<Float> for Stereo {
         self.1 *= rhs;
     }
 }
+impl ops::Div<Float> for Stereo {
+    type Output = Stereo;
+
+    fn div(self, rhs: Float) -> Self {
+        Stereo(self.0 / rhs, self.1 / rhs)
+    }
+}
+impl ops::Div<Stereo> for Stereo {
+    type Output = Stereo;
+
+    fn div(self, rhs: Stereo) -> Self {
+        Stereo(self.0 / rhs.0, self.1 / rhs.1)
+    }
+}
 
 impl Default for Stereo {
     fn default() -> Self {
