@@ -1,3 +1,17 @@
+use std::rc::Rc;
+use std::cell::RefCell;
+
+pub trait Wrap<T> {
+    fn wrap(t: T) -> Self;
+}
+
+pub type SharedMut<T> = Rc<RefCell<T>>;
+impl<T> Wrap<T> for SharedMut<T> {
+    fn wrap(t: T) -> Self {
+        Rc::new(RefCell::new(t))
+    }
+}
+
 pub use std::f64::consts::PI;
 pub use std::ops;
 
