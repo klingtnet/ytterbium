@@ -29,6 +29,13 @@ impl ops::Add<Stereo> for Stereo {
         Stereo(self.0 + rhs.0, self.1 + rhs.1)
     }
 }
+impl ops::Add<Float> for Stereo {
+    type Output = Stereo;
+
+    fn add(self, rhs: Float) -> Self {
+        Stereo(self.0 + rhs, self.1 + rhs)
+    }
+}
 impl ops::AddAssign<Stereo> for Stereo {
     fn add_assign(&mut self, rhs: Stereo) {
         self.0 += rhs.0;
