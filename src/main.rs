@@ -18,7 +18,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::process;
 use std::io::Write;
 
-use rb::{RB, RbProducer, RbConsumer};
+use rb::{RB, RbConsumer};
 
 #[macro_use]
 mod event;
@@ -167,21 +167,18 @@ fn run(args: Args) -> Result<(), RunError> {
                            let quit = quit.clone();
                            let sample_rate = args.sample_rate;
                            move || {
-                               let mut buf: [Stereo; BUF_SIZE / 16] = [Stereo::default(); BUF_SIZE /
-                                                                                          16];
-                               let mut voice_manager = VoiceManager::new(MAX_VOICES, sample_rate);
+                               let source = VoiceManager::new(MAX_VOICES, sample_rate);
+                               let sink = BufferSink::new(producer, 64);
+                               let mut flow = Flow::new(source, sink);
                                init.wait();
                                loop {
                                    if quit.load(Ordering::Relaxed) {
                                        break;
                                    }
-                                   for sample in buf.iter_mut() {
-                                       if let Ok(msg) = rx_dsp.try_recv() {
-                                           voice_manager.handle(&msg);
-                                       }
-                                       *sample = voice_manager.tick();
+                                   if let Ok(msg) = rx_dsp.try_recv() {
+                                       flow.handle(&msg);
                                    }
-                                   producer.write_blocking(&buf).unwrap();
+                                   flow.tick();
                                }
                            }
                        })
