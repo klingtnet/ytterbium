@@ -22,6 +22,7 @@ pub struct OscReceiver {
     socket: UdpSocket,
     buf: [u8; rosc::decoder::MTU],
     transpose: u8,
+    osc_mixer: (Float, Float),
     note_grid: [f32; 128],
 }
 impl OscReceiver {
@@ -31,6 +32,7 @@ impl OscReceiver {
             socket: socket,
             buf: [0u8; rosc::decoder::MTU],
             transpose: 0u8,
+            osc_mixer: (0.0, 0.0),
             note_grid: [0.0; 128],
         })
     }
@@ -52,8 +54,8 @@ impl OscReceiver {
             }
             match parts[0] {
                 "KEYS" => self.handle_keys(&msg, &parts, &mut events),
-                "OSC1" | "OSC2" | "OSC3" | "OSC4" => {
-                    self.handle_oscillators(&msg, &parts, &mut events)
+                "OSCILLATORS" => {
+                    self.handle_oscillators(&msg, &parts[1..], &mut events)
                 }
                 _ => println!("unmapped message: {:?}", msg),
             }
@@ -108,7 +110,7 @@ impl OscReceiver {
             _ => {}
         }
     }
-    fn handle_oscillators(&self,
+    fn handle_oscillators(&mut self,
                           msg: &OscMessage,
                           address: &[&str],
                           events: &mut Vec<ControlEvent>) {
@@ -143,6 +145,20 @@ impl OscReceiver {
                     events.push(ControlEvent::Volume {
                         id: address[0].to_owned(),
                         volume: (1.0 - volume as Float) * -80.0,
+                    });
+                }
+            }
+            ("MIXER", _) => {
+                let args = msg.args.as_ref().unwrap();
+                if let OscType::Float(val) = args[0] {
+                    match address[2] {
+                        "x" => self.osc_mixer.0 = val as Float,
+                        "y" => self.osc_mixer.1 = val as Float,
+                        _ => {},
+                    }
+                    let (x,y) = self.osc_mixer;
+                    events.push(ControlEvent::OscMixer {
+                        levels: [(1.0 - x) * (1.0 - y), (1.0 - x) * y, x * y, x * (1.0 - y)]
                     });
                 }
             }

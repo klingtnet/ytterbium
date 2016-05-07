@@ -13,6 +13,7 @@ use dsp::SignalSource;
 const OSC_CNT: usize = 4;
 
 pub struct Voice {
+    levels: [Float; OSC_CNT],
     volume_envelopes: [ADSR; OSC_CNT],
     oscillators: [WavetableOsc; OSC_CNT],
 }
@@ -22,6 +23,7 @@ impl Voice {
            pitch_convert_handle: Rc<PitchConvert>)
            -> Self {
         Voice {
+            levels: [1.0, 0.0, 0.0, 0.0],
             volume_envelopes: [ADSR::new(sample_rate),
                                ADSR::new(sample_rate),
                                ADSR::new(sample_rate),
@@ -50,13 +52,18 @@ impl Voice {
     fn tick(&mut self) -> Stereo {
         let mut frame = Stereo::default();
         for i in 0..OSC_CNT {
-            frame += self.oscillators[i].tick() * self.volume_envelopes[i].tick();
+            frame += self.oscillators[i].tick() * self.volume_envelopes[i].tick() * self.levels[i];
         }
         frame
     }
 }
 impl Controllable for Voice {
     fn handle(&mut self, msg: &ControlEvent) {
+        if let ControlEvent::OscMixer{levels} = *msg {
+            for (i, level) in levels.iter().enumerate() {
+                self.levels[i] = *level;
+            }
+        }
         for i in 0..OSC_CNT {
             self.volume_envelopes[i].handle(msg);
             self.oscillators[i].handle(msg);
