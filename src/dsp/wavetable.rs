@@ -261,12 +261,13 @@ impl WavetableOsc {
 
     pub fn set_phase(&mut self, phase: Float) {
         self.phase = phase;
+        self.phasor += phase;
     }
 
     /// Returns the next sample from the oscillator.
     pub fn tick(&mut self) -> Stereo {
         let sample = self.sample(self.phasor);
-        self.phasor = self.phasor + self.phase_incr;
+        self.phasor = self.phase + self.phasor + self.phase_incr;
         if self.phasor > 1.0 {
             self.phasor = self.phasor.fract(); // fractional part
         }
