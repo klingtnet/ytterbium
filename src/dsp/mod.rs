@@ -3,10 +3,12 @@ use types::Stereo;
 mod env_gen;
 mod wavetable;
 mod voice;
+mod flow;
 
 pub use self::env_gen::{ADSR, ADSRState};
 pub use self::wavetable::{Wavetable, WavetableOsc, generate_wavetables, Waveform};
 pub use self::voice::{VoiceManager};
+pub use self::flow::{Flow, BufferSink};
 
 pub trait SignalSource {
     fn tick(&mut self) -> Stereo;
