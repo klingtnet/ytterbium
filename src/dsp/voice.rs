@@ -8,6 +8,8 @@ use dsp::wavetable::*;
 use io::PitchConvert;
 use event::{ControlEvent, Controllable};
 
+use dsp::SignalSource;
+
 const OSC_CNT: usize = 4;
 
 pub struct Voice {
@@ -79,15 +81,6 @@ impl VoiceManager {
             note_queue: VecDeque::with_capacity(max_voices),
         }
     }
-    pub fn tick(&mut self) -> Stereo {
-        let mut out = Stereo::default();
-        for voice in &mut self.voices {
-            if voice.running() {
-                out += voice.tick()
-            }
-        }
-        out
-    }
 
     fn free_voice(&self) -> Option<usize> {
         for (idx, voice) in self.voices.iter().enumerate() {
@@ -96,6 +89,17 @@ impl VoiceManager {
             }
         }
         None
+    }
+}
+impl SignalSource for VoiceManager {
+    fn tick(&mut self) -> Stereo {
+        let mut out = Stereo::default();
+        for voice in &mut self.voices {
+            if voice.running() {
+                out += voice.tick()
+            }
+        }
+        out
     }
 }
 impl Controllable for VoiceManager {
