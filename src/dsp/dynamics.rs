@@ -21,17 +21,9 @@ impl SignalLink for SoftLimiter {
         // http://www.musicdsp.org/showone.php?id=238
         match (input.0.abs() > 3.0, input.1.abs() > 3.0) {
             (false, false) => input * (input * input + 27.0) / (input * input * 9.0 + 27.0),
-            (true, false) => {
-                Stereo(input.0.signum(), input.1)
-            }
-            (false, true) => {
-                Stereo(input.0, input.1.signum())
-            }
-            _ => {
-                Stereo(input.0.signum(), input.1.signum())
-            }
+            (true, false) => Stereo(input.0.signum(), input.1),
+            (false, true) => Stereo(input.0, input.1.signum()),
+            _ => Stereo(input.0.signum(), input.1.signum()),
         }
     }
 }
-
-

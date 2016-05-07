@@ -27,7 +27,7 @@ mod dsp;
 mod types;
 mod errors;
 use io::{Receiver, OscReceiver, MidiReceiver};
-use dsp::VoiceManager;
+use dsp::*;
 use event::Controllable;
 use types::*;
 use errors::RunError;

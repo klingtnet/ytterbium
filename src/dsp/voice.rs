@@ -73,7 +73,7 @@ impl VoiceManager {
         let wavetables = Rc::new(dsp::generate_wavetables(20.0, sample_rate));
         let pitch_convert = Rc::new(PitchConvert::default());
         let mut voices = Vec::with_capacity(max_voices);
-        for i in 0..max_voices {
+        for _ in 0..max_voices {
             voices.push(Voice::new(sample_rate, wavetables.clone(), pitch_convert.clone()));
         }
         VoiceManager {
