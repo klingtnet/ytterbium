@@ -1,6 +1,6 @@
 <JZML>
-<PROJECT version="5320" width="1280" height="756" osc_target="-1" midi_target="-1" kbmouse_target="-1" skin="Classic"/>
-<WINDOW class="JAZZINTERFACE" text="Oscillators" x="0" y="0" width="1280" height="756" id="1" state="1" group="0" font="tahoma,11,0" >
+<PROJECT version="5320" width="1280" height="756" osc_target="-1" midi_target="-1" kbmouse_target="-1" skin="Flat"/>
+<WINDOW class="JAZZINTERFACE" text="Oscillators" x="0" y="0" width="1280" height="756" id="1" state="0" group="0" font="tahoma,11,0" >
 <WINDOW class="Container" text="OSCILLATORS" x="0" y="0" width="1280" height="756" id="2" state="1" group="0" font="tahoma,10,0" send="1" osc_target="-2" midi_target="-2" kbmouse_target="-2" color="1596013" label="1" tabbar="1" meta="1">
 <WINDOW class="Tab" text="OSC1" x="0" y="0" width="1264" height="708" state="0" group="0" font="tahoma,11,0" >
 <WINDOW class="Container" text="OSC1" x="0" y="0" width="1264" height="708" id="9" state="5" group="0" font="tahoma,10,0" send="1" osc_target="-2" midi_target="-2" kbmouse_target="-2" color="1596013" label="1" tabbar="1" meta="0">
