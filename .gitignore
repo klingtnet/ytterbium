@@ -5,3 +5,4 @@ target/
 *.wav
 *.swp
 vim.session
+ytterbium-*-sweep.png
