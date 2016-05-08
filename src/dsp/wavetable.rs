@@ -92,7 +92,7 @@ fn build_wavetables(waveform: Waveform,
     let (mut harmonics, mut table_size) = match waveform {
         Waveform::Sine => (1, 4096),
         _ => {
-            let harmonics = sample_rate / (2 * fundamental_freq as usize);
+            let harmonics = sample_rate / (2 * (2.0 * fundamental_freq) as usize);
             let table_size = harmonics.next_power_of_two() * 2 * OVERSAMPLING;
             (harmonics, table_size)
         }
