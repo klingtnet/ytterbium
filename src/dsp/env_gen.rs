@@ -99,10 +99,15 @@ impl Controllable for ADSR {
         match *msg {
             ControlEvent::NoteOn { velocity, .. } => {
                 self.state_change(ADSRState::Attack);
+                // TODO: Retrigger option?
+                // self.level = 0.0;
+                // TODO: make velocity sensitivity controllable
                 self.velocity = Float::from_db((1.0 - velocity) * -30.0);
             }
             ControlEvent::NoteOff { .. } => self.state_change(ADSRState::Release),
             ControlEvent::ADSR { attack, decay, sustain, release, .. } => {
+                // check path
+                // TODO: make sure that all values are non-zero!
                 self.attack.0 = attack;
                 self.decay = decay;
                 self.sustain = sustain;

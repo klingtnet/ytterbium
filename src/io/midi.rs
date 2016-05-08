@@ -10,6 +10,10 @@ use io::Receiver;
 
 use event::ControlEvent;
 
+/// `MidiReceiver` needs to hold a reference to the portmidi context.
+/// This is because portmidi's terminate function is called when the context
+/// is dropped.
+#[allow(dead_code)]
 pub struct MidiReceiver {
     context: portmidi::PortMidi,
     in_ports: Vec<portmidi::InputPort>,

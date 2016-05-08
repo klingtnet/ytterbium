@@ -5,6 +5,7 @@ dependencies = [
  "approx 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clippy 0.0.64 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hound 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "portmidi 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -58,6 +59,11 @@ dependencies = [
  "toml 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-normalization 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "hound"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "libc"

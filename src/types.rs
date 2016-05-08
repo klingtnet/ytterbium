@@ -19,9 +19,12 @@ pub type Time = f32;
 /// A type alias for internal floating point precision.
 pub type Float = f64;
 
+
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// A tuple struct that represents a single stereo frame.
 pub struct Stereo(pub Float, pub Float);
 
+/// Overload addition for `Stereo` frame.
 impl ops::Add<Stereo> for Stereo {
     type Output = Stereo;
 
@@ -42,6 +45,7 @@ impl ops::AddAssign<Stereo> for Stereo {
         self.1 += rhs.1;
     }
 }
+/// Overload multiplication for `Stereo` frame.
 impl ops::Mul<Stereo> for Stereo {
     type Output = Stereo;
 
@@ -55,6 +59,7 @@ impl ops::MulAssign<Stereo> for Stereo {
         self.1 *= rhs.1;
     }
 }
+/// Overload multiplication for `Stereo` frame with scalar.
 impl ops::Mul<Float> for Stereo {
     type Output = Stereo;
 
@@ -90,6 +95,8 @@ impl Default for Stereo {
 }
 #[test]
 fn test_stereo() {
+    // It would be better to make a relative equality check with some error epsilon. But
+    // therefore `Sub` and  `abs()` had to be implemented for `Stereo`.
     let (a, b) = (Stereo(1.0, 2.0), Stereo(2.0, 4.0));
     assert_eq!(a + b, Stereo(3.0, 6.0));
     assert_eq!(a * b, Stereo(2.0, 8.0));
@@ -104,7 +111,7 @@ fn test_stereo() {
 pub const MINUS_THREE_DB: Float = 0.7079457843841379;
 pub const MINUS_SIX_DB: Float = MINUS_THREE_DB * MINUS_THREE_DB;
 
-/// Defines conversion methods from a plain `1/x` ratio into db and vice versa.
+/// Defines conversion methods from a plain `1/x` power ratio into db and vice versa.
 pub trait Db {
     /// Returns the ratio in dB.
     ///

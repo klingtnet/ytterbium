@@ -54,9 +54,7 @@ impl OscReceiver {
             }
             match parts[0] {
                 "KEYS" => self.handle_keys(&msg, &parts, &mut events),
-                "OSCILLATORS" => {
-                    self.handle_oscillators(&msg, &parts[1..], &mut events)
-                }
+                "OSCILLATORS" => self.handle_oscillators(&msg, &parts[1..], &mut events),
                 _ => println!("unmapped message: {:?}", msg),
             }
         }
@@ -117,6 +115,7 @@ impl OscReceiver {
         if address.len() < 3 {
             return;
         }
+        // TODO: refactor this mess
         match address[0] {
             "FM" => {
                 match address[1] {

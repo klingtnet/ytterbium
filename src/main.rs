@@ -32,9 +32,9 @@ use event::Controllable;
 use types::*;
 use errors::RunError;
 
-const MAX_VOICES: usize = 24;
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const BUF_SIZE: usize = 2048;
+const MAX_VOICES: usize = 16;
 
 macro_rules! printerr(
     ($($arg:tt)*) => { {

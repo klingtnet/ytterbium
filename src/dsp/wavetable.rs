@@ -355,3 +355,45 @@ impl Controllable for WavetableOsc {
         }
     }
 }
+
+#[test]
+fn test_wavetable_sweep() {
+    extern crate hound;
+    const SAMPLE_RATE: usize = 48_000;
+    const LOW_FREQ: Float = 20.0;
+    let wavetables = Rc::new(generate_wavetables(LOW_FREQ, SAMPLE_RATE));
+    let pitch_convert = Rc::new(PitchConvert::default());
+    let mut wt = WavetableOsc::new("OSC1", SAMPLE_RATE, wavetables, pitch_convert);
+    wt.set_volume(MINUS_THREE_DB);
+
+    let wave_spec = hound::WavSpec {
+        channels: 2,
+        sample_rate: SAMPLE_RATE as u32,
+        bits_per_sample: 32,
+    };
+    for waveform in &[Waveform::Sine,
+                      Waveform::Saw,
+                      Waveform::Square,
+                      Waveform::Tri,
+                      Waveform::SharpTri,
+                      Waveform::Random] {
+        let filename = format!("ytterbium-{}-{:?}-sweep.wav",
+                               env!("CARGO_PKG_VERSION"),
+                               waveform);
+        // An existing file will be overwritten.
+        let mut writer = hound::WavWriter::create(filename, wave_spec).unwrap();
+        let scale = ::std::i32::MAX as Float;
+        wt.set_waveform(*waveform);
+        let mut freq = LOW_FREQ;
+        let num_samples = (48000.0 * 10.0) as usize;
+        let multiplier = 1.0 + ((LOW_FREQ * 1000.0).ln() - (LOW_FREQ).ln()) / num_samples as Float;
+        for _ in 0..num_samples {
+            wt.set_freq(freq);
+            let frame = wt.tick() * scale;
+            writer.write_sample(frame.0 as i32).unwrap();
+            writer.write_sample(frame.1 as i32).unwrap();
+            freq *= multiplier;
+        }
+        writer.finalize().unwrap();
+    }
+}
