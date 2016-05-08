@@ -2,7 +2,7 @@ use types::{SharedMut, Stereo, Wrap};
 
 use event::{Controllable, ControlEvent};
 use rb::{RbProducer, Producer};
-use dsp::{SignalSource, SignalLink, SignalSink, SignalFlow, VoiceManager};
+use dsp::{SignalSource, SignalLink, SignalSink, SignalFlow, VoiceManager, SoftLimiter};
 
 pub struct Flow {
     source: VoiceManager,
@@ -13,7 +13,7 @@ impl Flow {
     pub fn new(source: VoiceManager, sink: BufferSink) -> Self {
         Flow {
             source: source,
-            links: vec![SharedMut::wrap(IdentityLink {})],
+            links: vec![SharedMut::wrap(SoftLimiter {})],
             sink: sink,
         }
     }
