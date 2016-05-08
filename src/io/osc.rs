@@ -18,12 +18,15 @@ macro_rules! exp_scale {
     }
 }
 
+const TRANSPOSE_RANGE: usize = 6; // Octaves
+const GRID_SIZE: usize = 96;
+
 pub struct OscReceiver {
     socket: UdpSocket,
     buf: [u8; rosc::decoder::MTU],
     transpose: u8,
     osc_mixer: (Float, Float),
-    note_grid: [f32; 128],
+    note_grid: [f32; GRID_SIZE + TRANSPOSE_RANGE * 12],
 }
 impl OscReceiver {
     pub fn new(addr: SocketAddr) -> Result<Self, RunError> {
@@ -33,7 +36,7 @@ impl OscReceiver {
             buf: [0u8; rosc::decoder::MTU],
             transpose: 0u8,
             osc_mixer: (0.0, 0.0),
-            note_grid: [0.0; 128],
+            note_grid: [0.0; GRID_SIZE + TRANSPOSE_RANGE * 12],
         })
     }
 }
@@ -72,7 +75,11 @@ impl OscReceiver {
                 }
                 for (idx, key) in msg.args.as_ref().unwrap().into_iter().enumerate() {
                     if let OscType::Float(velocity) = *key {
-                        let transposed_key = idx as u8 + self.transpose;
+                        // The key grid goes from left to right and bottom to up, i.e. the lowest
+                        // note is in the bottom left corner and the highest note in the top right.
+
+                        let rev_idx = 12 * ((idx / 12) + 1) - idx % 12;
+                        let transposed_key = (GRID_SIZE - rev_idx) as u8 + self.transpose;
                         // Determine if a `NoteOn` or `NoteOff` event was received by
                         // subtracting the last velocity from the received one.
                         // A negative difference determines a `NoteOff` and a positive
