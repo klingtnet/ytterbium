@@ -56,6 +56,10 @@ pub enum ControlEvent {
         id: String,
         detune: i32,
     },
+    FmLevel {
+        id: String,
+        levels: [Float; 3],
+    }
 }
 
 pub trait Controllable {

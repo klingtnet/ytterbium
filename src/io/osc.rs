@@ -117,111 +117,143 @@ impl OscReceiver {
         if address.len() < 3 {
             return;
         }
-        match (address[1], address[2]) {
-            ("ADSR", "x") => {
-                let args = msg.args
-                              .as_ref()
-                              .unwrap()
-                              .iter()
-                              .map(|arg| {
-                                  match *arg {
-                                      // TODO: Choose a quadratic scale?
-                                      OscType::Float(val) => exp_scale!(val),
-                                      _ => 1.0E-4,
-                                  }
-                              })
-                              .collect::<Vec<Float>>();
-                events.push(ControlEvent::ADSR {
-                    id: address[0].to_owned(),
-                    attack: 10.0 * args[0] as Time,
-                    decay: 20.0 * args[1] as Time,
-                    sustain: Float::from_db((1.0 - args[2]) * -40.0),
-                    release: 20.0 * args[3] as Time,
-                });
-            }
-            ("VOLUME", "x") => {
-                let args = msg.args.as_ref().unwrap();
-                if let OscType::Float(volume) = args[0] {
-                    events.push(ControlEvent::Volume {
-                        id: address[0].to_owned(),
-                        volume: (1.0 - volume as Float) * -80.0,
-                    });
-                }
-            }
-            ("MIXER", _) => {
-                let args = msg.args.as_ref().unwrap();
-                if let OscType::Float(val) = args[0] {
-                    match address[2] {
-                        "x" => self.osc_mixer.0 = val as Float,
-                        "y" => self.osc_mixer.1 = val as Float,
-                        _ => {},
+        match address[0] {
+            "FM" => {
+                match address[1] {
+                    "MIXER" => {
+                        let args = msg.args.as_ref().unwrap();
+                        if let OscType::Float(val) = args[0] {
+                            match address[2] {
+                                "x" => self.osc_mixer.0 = val as Float,
+                                "y" => self.osc_mixer.1 = val as Float,
+                                _ => {}
+                            }
+                            let (x, y) = self.osc_mixer;
+                            let mut levels = [(1.0 - x) * (1.0 - y),
+                                              (1.0 - x) * y,
+                                              x * y,
+                                              x * (1.0 - y)];
+                            for level in levels.iter_mut() {
+                                *level = level.sqrt();
+                            }
+                            events.push(ControlEvent::OscMixer { levels: levels });
+                        }
                     }
-                    let (x,y) = self.osc_mixer;
-                    let mut levels = [(1.0 - x) * (1.0 - y), (1.0 - x) * y, x * y, x * (1.0 - y)];
-                    for level in levels.iter_mut() {
-                        *level = level.sqrt();
+                    "OSC1" | "OSC2" | "OSC3" | "OSC4" => {
+                        match (address[2], address[3]) {
+                            ("LEVEL", "x") => {
+                                let args = msg.args
+                                              .as_ref()
+                                              .unwrap()
+                                              .iter()
+                                              .map(|arg| match *arg {
+                                                  OscType::Float(val) => val as Float,
+                                                  _ => 0.0,
+                                              })
+                                              .collect::<Vec<Float>>();
+                                if args.len() == 3 {
+                                    events.push(ControlEvent::FmLevel {
+                                        id: address[1].to_owned(),
+                                        levels: [args[0], args[1], args[2]],
+                                    });
+                                }
+                            }
+                            _ => {}
+                        }
                     }
-                    events.push(ControlEvent::OscMixer {
-                        levels: levels,
-                    });
+                    _ => {}
                 }
             }
-            ("PHASE", "x") => {
-                let args = msg.args.as_ref().unwrap();
-                if let OscType::Float(phase) = args[0] {
-                    events.push(ControlEvent::Phase {
-                        id: address[0].to_owned(),
-                        phase: phase as Float,
-                    });
-                }
-            }
-            ("TRANSPOSE", "x") => {
-                let args = msg.args.as_ref().unwrap();
-                if let OscType::Float(transpose) = args[0] {
-                    events.push(ControlEvent::Transpose {
-                        id: address[0].to_owned(),
-                        transpose: transpose as i32,
-                    });
-                }
-            }
-            ("DETUNE", "x") => {
-                let args = msg.args.as_ref().unwrap();
-                if let OscType::Float(detune) = args[0] {
-                    events.push(ControlEvent::Detune {
-                        id: address[0].to_owned(),
-                        detune: (detune * 100.0) as i32,
-                    });
-                }
-            }
-            ("PAN", "x") => {
-                let args = msg.args.as_ref().unwrap();
-                if let OscType::Float(pan) = args[0] {
-                    events.push(ControlEvent::Pan {
-                        id: address[0].to_owned(),
-                        pan: pan as Float,
-                    });
-                }
-            }
-            ("WAVEFORM", "selection") => {
-                let args = msg.args.as_ref().unwrap();
-                if let OscType::Float(selection) = args[0] {
-                    if let Some(waveform) = match selection as usize {
-                        0 => Some(Waveform::Sine),
-                        1 => Some(Waveform::Saw),
-                        2 => Some(Waveform::Square),
-                        3 => Some(Waveform::Tri),
-                        4 => Some(Waveform::SharpTri),
-                        5 => Some(Waveform::Random),
-                        _ => None,
-                    } {
-                        events.push(ControlEvent::Waveform {
+            _ => {
+                match (address[1], address[2]) {
+                    ("ADSR", "x") => {
+                        let args = msg.args
+                                      .as_ref()
+                                      .unwrap()
+                                      .iter()
+                                      .map(|arg| {
+                                          match *arg {
+                                              // TODO: Choose a quadratic scale?
+                                              OscType::Float(val) => exp_scale!(val),
+                                              _ => 1.0E-4,
+                                          }
+                                      })
+                                      .collect::<Vec<Float>>();
+                        events.push(ControlEvent::ADSR {
                             id: address[0].to_owned(),
-                            waveform: waveform,
-                        })
+                            attack: 10.0 * args[0] as Time,
+                            decay: 20.0 * args[1] as Time,
+                            sustain: Float::from_db((1.0 - args[2]) * -40.0),
+                            release: 20.0 * args[3] as Time,
+                        });
                     }
+                    ("VOLUME", "x") => {
+                        let args = msg.args.as_ref().unwrap();
+                        if let OscType::Float(volume) = args[0] {
+                            events.push(ControlEvent::Volume {
+                                id: address[0].to_owned(),
+                                volume: (1.0 - volume as Float) * -80.0,
+                            });
+                        }
+                    }
+                    ("PHASE", "x") => {
+                        let args = msg.args.as_ref().unwrap();
+                        if let OscType::Float(phase) = args[0] {
+                            events.push(ControlEvent::Phase {
+                                id: address[0].to_owned(),
+                                phase: phase as Float,
+                            });
+                        }
+                    }
+                    ("TRANSPOSE", "x") => {
+                        let args = msg.args.as_ref().unwrap();
+                        if let OscType::Float(transpose) = args[0] {
+                            events.push(ControlEvent::Transpose {
+                                id: address[0].to_owned(),
+                                transpose: transpose as i32,
+                            });
+                        }
+                    }
+                    ("DETUNE", "x") => {
+                        let args = msg.args.as_ref().unwrap();
+                        if let OscType::Float(detune) = args[0] {
+                            events.push(ControlEvent::Detune {
+                                id: address[0].to_owned(),
+                                detune: (detune * 100.0) as i32,
+                            });
+                        }
+                    }
+                    ("PAN", "x") => {
+                        let args = msg.args.as_ref().unwrap();
+                        if let OscType::Float(pan) = args[0] {
+                            events.push(ControlEvent::Pan {
+                                id: address[0].to_owned(),
+                                pan: pan as Float,
+                            });
+                        }
+                    }
+                    ("WAVEFORM", "selection") => {
+                        let args = msg.args.as_ref().unwrap();
+                        if let OscType::Float(selection) = args[0] {
+                            if let Some(waveform) = match selection as usize {
+                                0 => Some(Waveform::Sine),
+                                1 => Some(Waveform::Saw),
+                                2 => Some(Waveform::Square),
+                                3 => Some(Waveform::Tri),
+                                4 => Some(Waveform::SharpTri),
+                                5 => Some(Waveform::Random),
+                                _ => None,
+                            } {
+                                events.push(ControlEvent::Waveform {
+                                    id: address[0].to_owned(),
+                                    waveform: waveform,
+                                })
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
-            _ => {}
         }
     }
 
