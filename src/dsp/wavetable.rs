@@ -31,7 +31,11 @@ impl Wavetable {
     /// The phase is mapped to a table index.
     fn sample(&self, phasor: Float) -> Float {
         let table_len = self.table.len();
-        let idx = phasor * table_len as Float;
+        let idx = if phasor < 0.0 {
+            phasor + 1.0
+        } else {
+            phasor
+        } * table_len as Float;
         // linear interpolation
         let (i, j) = (idx.floor() as usize % table_len, idx.ceil() as usize % table_len);
         self.table[i] + (self.table[j] - self.table[i]) * (idx - i as Float)
