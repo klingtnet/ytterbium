@@ -59,7 +59,7 @@ pub enum ControlEvent {
     FmLevel {
         id: String,
         levels: [Float; 3],
-    }
+    },
 }
 
 pub trait Controllable {

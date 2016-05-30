@@ -24,16 +24,16 @@ impl MidiReceiver {
         const BUF_LEN: usize = 1024;
         let context = try!(portmidi::PortMidi::new().map_err(RunError::MidiError));
         let in_devices = context.devices()
-                                .unwrap()
-                                .into_iter()
-                                .filter(|dev| dev.is_input())
-                                .collect::<Vec<portmidi::DeviceInfo>>();
+            .unwrap()
+            .into_iter()
+            .filter(|dev| dev.is_input())
+            .collect::<Vec<portmidi::DeviceInfo>>();
         let in_ports = in_devices.into_iter()
-                                 .filter_map(|dev| {
-                                     context.input_port(dev, BUF_LEN)
-                                            .ok()
-                                 })
-                                 .collect::<Vec<portmidi::InputPort>>();
+            .filter_map(|dev| {
+                context.input_port(dev, BUF_LEN)
+                    .ok()
+            })
+            .collect::<Vec<portmidi::InputPort>>();
         if in_ports.is_empty() {
             Err(RunError::NoMidiDeviceAvailable)
         } else {

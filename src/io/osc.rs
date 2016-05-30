@@ -43,8 +43,8 @@ impl OscReceiver {
 impl OscReceiver {
     fn receive(&mut self) -> Result<OscPacket, RunError> {
         let (size, _) = try!(self.socket
-                                 .recv_from(&mut self.buf)
-                                 .map_err(RunError::IoError));
+            .recv_from(&mut self.buf)
+            .map_err(RunError::IoError));
         rosc::decoder::decode(&self.buf[..size]).map_err(RunError::OscError)
     }
 
@@ -135,10 +135,8 @@ impl OscReceiver {
                                 _ => {}
                             }
                             let (x, y) = self.osc_mixer;
-                            let mut levels = [(1.0 - x) * (1.0 - y),
-                                              (1.0 - x) * y,
-                                              x * y,
-                                              x * (1.0 - y)];
+                            let mut levels =
+                                [(1.0 - x) * (1.0 - y), (1.0 - x) * y, x * y, x * (1.0 - y)];
                             for level in levels.iter_mut() {
                                 *level = level.sqrt();
                             }
@@ -149,14 +147,14 @@ impl OscReceiver {
                         match (address[2], address[3]) {
                             ("LEVEL", "x") => {
                                 let args = msg.args
-                                              .as_ref()
-                                              .unwrap()
-                                              .iter()
-                                              .map(|arg| match *arg {
-                                                  OscType::Float(val) => val as Float,
-                                                  _ => 0.0,
-                                              })
-                                              .collect::<Vec<Float>>();
+                                    .as_ref()
+                                    .unwrap()
+                                    .iter()
+                                    .map(|arg| match *arg {
+                                        OscType::Float(val) => val as Float,
+                                        _ => 0.0,
+                                    })
+                                    .collect::<Vec<Float>>();
                                 if args.len() == 3 {
                                     events.push(ControlEvent::FmLevel {
                                         id: address[1].to_owned(),
@@ -174,17 +172,17 @@ impl OscReceiver {
                 match (address[1], address[2]) {
                     ("ADSR", "x") => {
                         let args = msg.args
-                                      .as_ref()
-                                      .unwrap()
-                                      .iter()
-                                      .map(|arg| {
-                                          match *arg {
-                                              // TODO: Choose a quadratic scale?
-                                              OscType::Float(val) => exp_scale!(val),
-                                              _ => 1.0E-4,
-                                          }
-                                      })
-                                      .collect::<Vec<Float>>();
+                            .as_ref()
+                            .unwrap()
+                            .iter()
+                            .map(|arg| {
+                                match *arg {
+                                    // TODO: Choose a quadratic scale?
+                                    OscType::Float(val) => exp_scale!(val),
+                                    _ => 1.0E-4,
+                                }
+                            })
+                            .collect::<Vec<Float>>();
                         events.push(ControlEvent::ADSR {
                             id: address[0].to_owned(),
                             attack: 10.0 * args[0] as Time,

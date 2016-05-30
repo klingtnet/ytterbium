@@ -23,12 +23,12 @@ impl PitchConvert {
         PitchConvert {
             // see https://en.wikipedia.org/wiki/MIDI_Tuning_Standard
             table: (0..128)
-                       .map(|key| {
-                           let dist_concert_a = key as isize - 69;
-                           let two: Float = 2.0;
-                           two.powf(dist_concert_a as Float / 12.0) * tune_freq
-                       })
-                       .collect::<Vec<_>>(),
+                .map(|key| {
+                    let dist_concert_a = key as isize - 69;
+                    let two: Float = 2.0;
+                    two.powf(dist_concert_a as Float / 12.0) * tune_freq
+                })
+                .collect::<Vec<_>>(),
         }
     }
 

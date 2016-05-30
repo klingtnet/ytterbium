@@ -59,7 +59,7 @@ impl Voice {
 }
 impl Controllable for Voice {
     fn handle(&mut self, msg: &ControlEvent) {
-        if let ControlEvent::OscMixer{levels} = *msg {
+        if let ControlEvent::OscMixer { levels } = *msg {
             for (i, level) in levels.iter().enumerate() {
                 self.levels[i] = *level;
             }
