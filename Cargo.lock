@@ -5,6 +5,7 @@ dependencies = [
  "approx 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clippy 0.0.64 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bincode 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "hound 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "portmidi 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -12,6 +13,7 @@ dependencies = [
  "rb 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rosc 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rsoundio 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustfft 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -26,6 +28,17 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "bincode"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "byteorder 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num-traits 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 0.7.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "bitflags"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -33,6 +46,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "byteorder"
 version = "0.3.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "byteorder"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -210,6 +228,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "nom 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "serde"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "strsim"

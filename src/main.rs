@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate approx;
+extern crate rustc_serialize;
 
 extern crate rosc;
 extern crate rsoundio;

@@ -1,11 +1,16 @@
 extern crate rustfft;
 extern crate num;
 extern crate rand;
+extern crate bincode;
 
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
 use self::num::{Complex, Zero};
 use self::rustfft::FFT;
+use self::bincode::rustc_serialize::{decode_from, encode_into};
+use self::bincode::SizeLimit;
 
 use types::*;
 use io::PitchConvert;
@@ -17,6 +22,7 @@ const SCALE: bool = true;
 
 /// Stores a period of a band-limited signal together with
 /// the maximum frequency before aliasing occurs.
+#[derive(RustcDecodable, RustcEncodable)]
 pub struct Wavetable {
     /// The band-limited signal
     table: Vec<Float>,
@@ -70,18 +76,31 @@ pub fn generate_wavetables(fundamental_freq: Float,
                            sample_rate: usize)
                            -> HashMap<Waveform, Vec<Wavetable>> {
     let mut tables: HashMap<Waveform, Vec<Wavetable>> = HashMap::new();
-    tables.insert(Waveform::Sine,
-                  build_wavetables(Waveform::Sine, fundamental_freq, sample_rate));
-    tables.insert(Waveform::Saw,
-                  build_wavetables(Waveform::Saw, fundamental_freq, sample_rate));
-    tables.insert(Waveform::Square,
-                  build_wavetables(Waveform::Square, fundamental_freq, sample_rate));
-    tables.insert(Waveform::Tri,
-                  build_wavetables(Waveform::Tri, fundamental_freq, sample_rate));
-    tables.insert(Waveform::SharpTri,
-                  build_wavetables(Waveform::SharpTri, fundamental_freq, sample_rate));
-    tables.insert(Waveform::Random,
-                  build_wavetables(Waveform::Random, fundamental_freq, sample_rate));
+    for waveform in &[Waveform::Saw,
+                      Waveform::Sine,
+                      Waveform::Square,
+                      Waveform::Tri,
+                      Waveform::SharpTri,
+                      Waveform::Random] {
+        let filename = format!("ytterbium-{}-wavetable-{:?}.bin",
+                               env!("CARGO_PKG_VERSION"),
+                               waveform);
+        let band_limited_table = {
+            if let Ok(file) = File::open(&filename) {
+                let mut reader = BufReader::new(file);
+                decode_from(&mut reader, SizeLimit::Infinite)
+                    .expect(&format!("could not decode wavetable: {}", filename))
+            } else {
+                let band_limited_table = build_wavetables(*waveform, fundamental_freq, sample_rate);
+                let file = File::create(&filename)
+                    .expect(&format!("could not create file for wavetable: {}", filename));
+                let mut writer = BufWriter::new(file);
+                encode_into(&band_limited_table, &mut writer, SizeLimit::Infinite);
+                band_limited_table
+            }
+        };
+        tables.insert(*waveform, band_limited_table);
+    }
     tables
 }
 
