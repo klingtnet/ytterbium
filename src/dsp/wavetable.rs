@@ -409,7 +409,7 @@ fn test_wavetable_sweep() {
         let scale = ::std::i32::MAX as Float;
         wt.set_waveform(*waveform);
         let mut freq = LOW_FREQ;
-        let num_samples = (48000.0 * 10.0) as usize;
+        let num_samples = SAMPLE_RATE * 10;
         let multiplier = 1.0 + ((LOW_FREQ * 1000.0).ln() - (LOW_FREQ).ln()) / num_samples as Float;
         for _ in 0..num_samples {
             wt.set_freq(freq);
