@@ -211,10 +211,12 @@ pub struct WavetableOsc {
     key: u8,
     detune_hz: Float,
     phase: Float,
+    phase_changed: bool,
     phasor: Float,
     transpose: i32, // transposition in octaves
     volume: Float,
     pan: Stereo,
+    last_frame: Stereo,
     waveform: Waveform,
     id: String,
     pitch_convert: Rc<PitchConvert>,
@@ -233,10 +235,12 @@ impl WavetableOsc {
             key: 0,
             detune_hz: 0.0, // Hz
             phase: 0.0,
+            phase_changed: false,
             phasor: 0.0,
             transpose: 0,
             volume: MINUS_SIX_DB * MINUS_SIX_DB,
             pan: Stereo(MINUS_THREE_DB, MINUS_THREE_DB),
+            last_frame: Stereo::default(),
             waveform: Waveform::Sine,
             id: id.into(),
             pitch_convert: pitch_convert,
@@ -264,17 +268,26 @@ impl WavetableOsc {
     }
 
     pub fn set_phase(&mut self, phase: Float) {
+        const PHASE_DELTA: Float = 0.01;
+        if (self.phase - phase).abs() > PHASE_DELTA {
+            self.phase_changed = true;
+        }
         self.phase = phase;
     }
 
     /// Returns the next sample from the oscillator.
     pub fn tick(&mut self) -> Stereo {
-        let sample = self.sample(self.phasor);
-        self.phasor = self.phase + self.phasor + self.phase_incr;
-        if self.phasor > 1.0 {
-            self.phasor = self.phasor.fract(); // fractional part
+        let phasor = (self.phasor + self.phase).fract();
+        let sample = self.sample(phasor);
+        let mut frame = Stereo(sample, sample) * self.volume * self.pan;
+        if self.phase_changed {
+            frame = (self.last_frame + frame) / 2.0;
+            self.phase_changed = false;
         }
-        Stereo(sample, sample) * self.volume * self.pan
+
+        self.phasor += self.phase_incr;
+        self.last_frame = frame;
+        self.last_frame
     }
 
     /// Returns the sample from the appropriate band-limited wavetable.
