@@ -421,3 +421,127 @@ fn test_wavetable_sweep() {
         writer.finalize().unwrap();
     }
 }
+
+// test negative phase values
+#[test]
+fn test_wavetable_phase() {
+    const SAMPLE_RATE: usize = 48_000;
+    const LOW_FREQ: Float = 20.0;
+    const EPSILON: f64 = 0.0001;
+    let wavetables = Rc::new(generate_wavetables(LOW_FREQ, SAMPLE_RATE));
+    let pitch_convert = Rc::new(PitchConvert::default());
+    let mut osc = WavetableOsc::new("OSC1", SAMPLE_RATE, wavetables, pitch_convert);
+    osc.set_volume(0.0); // stereo -> both channels -3db :(
+
+    for freq in &[1.0, 1000.0, ((SAMPLE_RATE >> 1) - 1) as Float] {
+        osc.reset();
+        osc.set_freq(*freq);
+        let num_samples = SAMPLE_RATE / *freq as usize; // one period
+
+        let mut total_error = 0.0;
+        let phase_incr = (2.0 * PI * freq) / SAMPLE_RATE as Float; // for reference sine
+
+        for idx in 0..num_samples {
+            let frame = osc.tick();
+            let sine = Float::sin(phase_incr * idx as Float) * MINUS_THREE_DB;
+            let error = sine - frame.0;
+            total_error += error * error; // squared error
+        }
+        assert_relative_eq!(total_error, 0.0, epsilon = EPSILON);
+
+        // +90 degree: sin->cos
+        osc.reset();
+        osc.last_frame = Stereo(MINUS_THREE_DB, MINUS_THREE_DB);
+        total_error = 0.0;
+        osc.set_phase(0.25);
+
+        for idx in 0..num_samples {
+            let frame = osc.tick();
+            let cosine = Float::cos(phase_incr * idx as Float) * MINUS_THREE_DB;
+            let error = cosine - frame.0;
+            total_error += error * error; // squared error
+        }
+        assert_relative_eq!(total_error, 0.0, epsilon = EPSILON);
+
+        // 180 degree
+        osc.reset();
+        total_error = 0.0;
+        osc.set_phase(0.5);
+
+        for idx in 0..num_samples {
+            let frame = osc.tick();
+            let sine = Float::sin(phase_incr * idx as Float + PI) * MINUS_THREE_DB;
+            let error = sine - frame.0;
+            total_error += error * error; // squared error
+        }
+        assert_relative_eq!(total_error, 0.0, epsilon = EPSILON);
+
+        // -90 degree
+        osc.reset();
+        total_error = 0.0;
+        osc.set_phase(-0.5);
+
+        for idx in 0..num_samples {
+            let frame = osc.tick();
+            let sine = Float::sin(phase_incr * idx as Float - PI) * MINUS_THREE_DB;
+            let error = sine - frame.0;
+            total_error += error * error; // squared error
+        }
+        assert_relative_eq!(total_error, 0.0, epsilon = EPSILON);
+    }
+}
+
+#[test]
+fn test_wavetable_fm() {
+    extern crate hound;
+    const SAMPLE_RATE: usize = 48_000;
+    const LOW_FREQ: Float = 20.0;
+    let wavetables = Rc::new(generate_wavetables(LOW_FREQ, SAMPLE_RATE));
+    let pitch_convert = Rc::new(PitchConvert::default());
+    let mut carrier = WavetableOsc::new("CARRIER",
+                                        SAMPLE_RATE,
+                                        wavetables.clone(),
+                                        pitch_convert.clone());
+    carrier.set_volume(MINUS_SIX_DB);
+    let mut modulator = WavetableOsc::new("MODULATOR",
+                                          SAMPLE_RATE,
+                                          wavetables.clone(),
+                                          pitch_convert.clone());
+    let mut mod_index = 0.01;
+
+    let wave_spec = hound::WavSpec {
+        channels: 2,
+        sample_rate: SAMPLE_RATE as u32,
+        bits_per_sample: 32,
+    };
+    let scale = ::std::i32::MAX as Float;
+    let filename = format!("ytterbium-{}-fm.wav", env!("CARGO_PKG_VERSION"));
+
+    let carrier_freq = 440.0;
+    carrier.set_freq(carrier_freq);
+    // carrier.set_waveform(Waveform::Saw);
+    let mut modulator_freq = carrier_freq / 100.0;
+    modulator.set_freq(modulator_freq);
+    modulator.set_waveform(Waveform::Tri);
+    let num_samples = SAMPLE_RATE * 10; // 10s
+
+    let mut writer = hound::WavWriter::create(filename, wave_spec).unwrap();
+    for idx in 0..num_samples {
+        let mod_frame = modulator.tick();
+        // carrier.set_phase((mod_frame.0 * mod_index).abs());
+        // carrier.phase = mod_frame.0 * mod_index;
+        carrier.set_phase(mod_frame.0 * mod_index);
+        let frame = carrier.tick() * scale;
+        writer.write_sample(frame.0 as i32).unwrap();
+        writer.write_sample(frame.1 as i32).unwrap();
+        if idx % (SAMPLE_RATE / 10) == 0 {
+            modulator_freq *= 2.0;
+            modulator.set_freq(modulator_freq);
+        }
+        if idx % SAMPLE_RATE == 0 {
+            mod_index *= 2.0;
+            modulator_freq = carrier_freq / 100.0;
+        }
+    }
+    writer.finalize().unwrap();
+}
