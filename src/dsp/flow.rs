@@ -22,7 +22,7 @@ impl Controllable for Flow {
     fn handle(&mut self, msg: &ControlEvent) {
         match *msg {
             _ => {
-                self.source.handle(&msg);
+                self.source.handle(msg);
                 // TODO: send to all links
             }
         }

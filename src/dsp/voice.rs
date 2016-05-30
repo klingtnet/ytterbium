@@ -115,23 +115,23 @@ impl Controllable for VoiceManager {
             ControlEvent::NoteOn { key, .. } => {
                 if let Some(idx) = self.free_voice() {
                     self.note_queue.push_back((key, idx));
-                    self.voices[idx].handle(&msg)
+                    self.voices[idx].handle(msg)
                 } else {
                     let (_, old_idx) = self.note_queue.pop_front().unwrap_or((0, 0));
-                    self.voices[old_idx].handle(&msg);
+                    self.voices[old_idx].handle(msg);
                     self.note_queue.push_back((key, old_idx))
                 }
             }
             ControlEvent::NoteOff { key, .. } => {
                 for &(played_key, idx) in &self.note_queue {
                     if played_key == key {
-                        self.voices[idx].handle(&msg)
+                        self.voices[idx].handle(msg)
                     }
                 }
             }
             _ => {
                 for voice in &mut self.voices {
-                    voice.handle(&msg)
+                    voice.handle(msg)
                 }
             }
         }
