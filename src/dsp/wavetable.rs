@@ -304,6 +304,13 @@ impl WavetableOsc {
         let wavetable = &wavetables[idx];
         wavetable.sample(phasor)
     }
+
+    /// Resets the state of the oscillator.
+    fn reset(&mut self) {
+        self.phase = 0.0;
+        self.phasor = 0.0;
+        self.last_frame = Stereo::default();
+    }
 }
 
 impl Controllable for WavetableOsc {
@@ -397,6 +404,7 @@ fn test_wavetable_sweep() {
                                env!("CARGO_PKG_VERSION"),
                                waveform);
         // An existing file will be overwritten.
+        wt.reset();
         let mut writer = hound::WavWriter::create(filename, wave_spec).unwrap();
         let scale = ::std::i32::MAX as Float;
         wt.set_waveform(*waveform);
