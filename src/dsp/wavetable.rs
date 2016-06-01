@@ -95,7 +95,8 @@ pub fn generate_wavetables(fundamental_freq: Float,
                 let file = File::create(&filename)
                     .expect(&format!("could not create file for wavetable: {}", filename));
                 let mut writer = BufWriter::new(file);
-                encode_into(&band_limited_table, &mut writer, SizeLimit::Infinite);
+                encode_into(&band_limited_table, &mut writer, SizeLimit::Infinite)
+                    .expect(&format!("could not encode wavetable: {}", filename));
                 band_limited_table
             }
         };
