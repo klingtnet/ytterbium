@@ -243,11 +243,10 @@ pub struct WavetableOsc {
 }
 impl WavetableOsc {
     /// Constructs a wavetable oscillator for the given sample rate.
-    pub fn new<S: Into<String>>(id: S,
-                                sample_rate: usize,
-                                wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
-                                pitch_convert: Rc<PitchConvert>)
-                                -> Self {
+    pub fn new(sample_rate: usize,
+               wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
+               pitch_convert: Rc<PitchConvert>)
+               -> Self {
         WavetableOsc {
             phase_incr: 0.0,
             sample_rate: sample_rate,
@@ -261,10 +260,20 @@ impl WavetableOsc {
             pan: Stereo(MINUS_THREE_DB, MINUS_THREE_DB),
             last_frame: Stereo::default(),
             waveform: Waveform::Sine,
-            id: id.into(),
+            id: "".to_owned(),
             pitch_convert: pitch_convert,
             tables: wavetables,
         }
+    }
+
+    pub fn with_id<S: Into<String>>(id: S,
+                                    sample_rate: usize,
+                                    wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
+                                    pitch_convert: Rc<PitchConvert>)
+                                    -> Self {
+        let mut osc = WavetableOsc::new(sample_rate, wavetables, pitch_convert);
+        osc.set_id(id);
+        osc
     }
 
     /// Sets the oscillators frequency in Hz.
@@ -292,6 +301,10 @@ impl WavetableOsc {
             self.phase_changed = true;
         }
         self.phase = phase;
+    }
+
+    pub fn set_id<S: Into<String>>(&mut self, id: S) {
+        self.id = id.into();
     }
 
     /// Returns the next sample from the oscillator.
@@ -405,7 +418,7 @@ fn test_wavetable_sweep() {
     const LOW_FREQ: Float = 20.0;
     let wavetables = Rc::new(generate_wavetables(LOW_FREQ, SAMPLE_RATE));
     let pitch_convert = Rc::new(PitchConvert::default());
-    let mut wt = WavetableOsc::new("OSC1", SAMPLE_RATE, wavetables, pitch_convert);
+    let mut wt = WavetableOsc::new(SAMPLE_RATE, wavetables, pitch_convert);
     wt.set_volume(MINUS_THREE_DB);
 
     let wave_spec = hound::WavSpec {
@@ -449,7 +462,7 @@ fn test_wavetable_phase() {
     const EPSILON: f64 = 0.0001;
     let wavetables = Rc::new(generate_wavetables(LOW_FREQ, SAMPLE_RATE));
     let pitch_convert = Rc::new(PitchConvert::default());
-    let mut osc = WavetableOsc::new("OSC1", SAMPLE_RATE, wavetables, pitch_convert);
+    let mut osc = WavetableOsc::new(SAMPLE_RATE, wavetables, pitch_convert);
     osc.set_volume(0.0); // stereo -> both channels -3db :(
 
     for freq in &[1.0, 1000.0, ((SAMPLE_RATE >> 1) - 1) as Float] {
@@ -517,15 +530,9 @@ fn test_wavetable_fm() {
     const LOW_FREQ: Float = 20.0;
     let wavetables = Rc::new(generate_wavetables(LOW_FREQ, SAMPLE_RATE));
     let pitch_convert = Rc::new(PitchConvert::default());
-    let mut carrier = WavetableOsc::new("CARRIER",
-                                        SAMPLE_RATE,
-                                        wavetables.clone(),
-                                        pitch_convert.clone());
+    let mut carrier = WavetableOsc::new(SAMPLE_RATE, wavetables.clone(), pitch_convert.clone());
     carrier.set_volume(MINUS_SIX_DB);
-    let mut modulator = WavetableOsc::new("MODULATOR",
-                                          SAMPLE_RATE,
-                                          wavetables.clone(),
-                                          pitch_convert.clone());
+    let mut modulator = WavetableOsc::new(SAMPLE_RATE, wavetables.clone(), pitch_convert.clone());
     let mut mod_index = 0.01;
 
     let wave_spec = hound::WavSpec {

@@ -22,6 +22,7 @@ impl ADSRState {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct ADSR {
     sample_rate: usize,
     attack: (Time, Float),

@@ -13,9 +13,9 @@ use dsp::SignalSource;
 const OSC_CNT: usize = 4;
 
 pub struct Voice {
-    levels: [Float; OSC_CNT],
-    volume_envelopes: [ADSR; OSC_CNT],
-    oscillators: [WavetableOsc; OSC_CNT],
+    levels: Vec<Float>,
+    volume_envelopes: Vec<ADSR>,
+    oscillators: Vec<WavetableOsc>,
 }
 impl Voice {
     fn new(sample_rate: usize,
@@ -23,27 +23,16 @@ impl Voice {
            pitch_convert_handle: Rc<PitchConvert>)
            -> Self {
         Voice {
-            levels: [1.0, 0.0, 0.0, 0.0],
-            volume_envelopes: [ADSR::new(sample_rate),
-                               ADSR::new(sample_rate),
-                               ADSR::new(sample_rate),
-                               ADSR::new(sample_rate)],
-            oscillators: [WavetableOsc::new("OSC1",
-                                            sample_rate,
-                                            wavetables.clone(),
-                                            pitch_convert_handle.clone()),
-                          WavetableOsc::new("OSC2",
-                                            sample_rate,
-                                            wavetables.clone(),
-                                            pitch_convert_handle.clone()),
-                          WavetableOsc::new("OSC3",
-                                            sample_rate,
-                                            wavetables.clone(),
-                                            pitch_convert_handle.clone()),
-                          WavetableOsc::new("OSC4",
-                                            sample_rate,
-                                            wavetables.clone(),
-                                            pitch_convert_handle.clone())],
+            levels: vec![1.0, 0.0, 0.0, 0.0],
+            volume_envelopes: vec![ADSR::new(sample_rate); OSC_CNT],
+            oscillators: (0..OSC_CNT)
+                .map(|idx| {
+                    WavetableOsc::with_id(format!("OSC{}", idx),
+                                          sample_rate,
+                                          wavetables.clone(),
+                                          pitch_convert_handle.clone())
+                })
+                .collect(),
         }
     }
     fn running(&self) -> bool {
