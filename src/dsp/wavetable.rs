@@ -437,16 +437,16 @@ fn test_wavetable_sweep() {
                                env!("CARGO_PKG_VERSION"),
                                waveform);
         // An existing file will be overwritten.
-        wt.reset();
+        osc.reset();
         let mut writer = hound::WavWriter::create(filename, wave_spec).unwrap();
         let scale = ::std::i32::MAX as Float;
-        wt.set_waveform(*waveform);
+        osc.set_waveform(*waveform);
         let mut freq = LOW_FREQ;
         let num_samples = SAMPLE_RATE * 10;
         let multiplier = 1.0 + ((LOW_FREQ * 1000.0).ln() - (LOW_FREQ).ln()) / num_samples as Float;
         for _ in 0..num_samples {
-            wt.set_freq(freq);
-            let frame = wt.tick() * scale;
+            osc.set_freq(freq);
+            let frame = osc.tick() * scale;
             writer.write_sample(frame.0 as i32).unwrap();
             writer.write_sample(frame.1 as i32).unwrap();
             freq *= multiplier;
