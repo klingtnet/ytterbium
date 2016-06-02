@@ -419,8 +419,8 @@ fn test_wavetable_sweep() {
     const LOW_FREQ: Float = 20.0;
     let wavetables = Rc::new(generate_wavetables(LOW_FREQ, SAMPLE_RATE));
     let pitch_convert = Rc::new(PitchConvert::default());
-    let mut wt = WavetableOsc::new(SAMPLE_RATE, wavetables, pitch_convert);
-    wt.set_volume(MINUS_THREE_DB);
+    let mut osc = WavetableOsc::new(SAMPLE_RATE, wavetables, pitch_convert);
+    osc.set_volume(MINUS_THREE_DB);
 
     let wave_spec = hound::WavSpec {
         channels: 2,
