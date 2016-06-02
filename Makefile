@@ -10,7 +10,7 @@ all: test build examples doc
 
 clippy:
 	rustup run nightly -- cargo build --features lints
-	rustup run nightly -- cargo clippy -- -Dclippy -Wclippy_pedantic --verbose
+	rustup run nightly -- cargo clippy --verbose
 
 build: $(SOURCES)
 	cargo build $(BUILD_OPTS)
