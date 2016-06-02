@@ -534,7 +534,7 @@ fn test_wavetable_fm() {
     let mut carrier = WavetableOsc::new(SAMPLE_RATE, wavetables.clone(), pitch_convert.clone());
     carrier.set_volume(MINUS_SIX_DB);
     let mut modulator = WavetableOsc::new(SAMPLE_RATE, wavetables.clone(), pitch_convert.clone());
-    let mut mod_index = 0.01;
+    let num_samples = SAMPLE_RATE * 10;
 
     let wave_spec = hound::WavSpec {
         channels: 2,
@@ -546,29 +546,25 @@ fn test_wavetable_fm() {
 
     let carrier_freq = 440.0;
     carrier.set_freq(carrier_freq);
-    // carrier.set_waveform(Waveform::Saw);
-    let mut modulator_freq = carrier_freq / 100.0;
+
+    let mut modulator_freq = carrier_freq / 8.0;
+    let freq_multiplier =
+        1.0 + ((carrier_freq * 8.0).ln() - (modulator_freq).ln()) / num_samples as Float;
     modulator.set_freq(modulator_freq);
-    modulator.set_waveform(Waveform::Tri);
-    let num_samples = SAMPLE_RATE * 10; // 10s
+
+    let mut mod_index: Float = 0.01;
+    let multiplier = 1.0 + ((mod_index * 1000.0).ln() - (mod_index).ln()) / num_samples as Float;
 
     let mut writer = hound::WavWriter::create(filename, wave_spec).unwrap();
     for idx in 0..num_samples {
         let mod_frame = modulator.tick();
-        // carrier.set_phase((mod_frame.0 * mod_index).abs());
-        // carrier.phase = mod_frame.0 * mod_index;
+        let frame = carrier.tick();
         carrier.set_phase(mod_frame.0 * mod_index);
-        let frame = carrier.tick() * scale;
-        writer.write_sample(frame.0 as i32).unwrap();
-        writer.write_sample(frame.1 as i32).unwrap();
-        if idx % (SAMPLE_RATE / 10) == 0 {
-            modulator_freq *= 2.0;
-            modulator.set_freq(modulator_freq);
-        }
-        if idx % SAMPLE_RATE == 0 {
-            mod_index *= 2.0;
-            modulator_freq = carrier_freq / 100.0;
-        }
+        writer.write_sample((frame.0 * scale) as i32).unwrap();
+        writer.write_sample((frame.1 * scale) as i32).unwrap();
+        mod_index *= multiplier;
+        modulator_freq *= freq_multiplier;
+        modulator.set_freq(modulator_freq);
     }
     writer.finalize().unwrap();
 }
