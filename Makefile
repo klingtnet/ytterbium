@@ -40,6 +40,7 @@ run: build
 
 test: $(TESTS) $(SOURCES)
 	cargo test
+	./generate_spectrograms.sh
 
 clean:
 	rm -r ./target
