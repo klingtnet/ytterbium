@@ -135,11 +135,7 @@ impl OscReceiver {
                                 _ => {}
                             }
                             let (x, y) = self.osc_mixer;
-                            let mut levels =
-                                [(1.0 - x) * (1.0 - y), (1.0 - x) * y, x * y, x * (1.0 - y)];
-                            for level in levels.iter_mut() {
-                                *level = level.sqrt();
-                            }
+                            let levels = [(1.0 - x) * (1.0 - y), (1.0 - x) * y, x * y, x * (1.0 - y)].iter().map(|level| level.sqrt()).collect::<Vec<_>>();
                             events.push(ControlEvent::OscMixer { levels: levels });
                         }
                     }

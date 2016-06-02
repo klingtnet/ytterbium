@@ -38,7 +38,7 @@ pub enum ControlEvent {
         volume: Float,
     },
     OscMixer {
-        levels: [Float; 4],
+        levels: Vec<Float>,
     },
     Pan {
         id: String,

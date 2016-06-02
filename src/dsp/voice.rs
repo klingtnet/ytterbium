@@ -48,10 +48,8 @@ impl Voice {
 }
 impl Controllable for Voice {
     fn handle(&mut self, msg: &ControlEvent) {
-        if let ControlEvent::OscMixer { levels } = *msg {
-            for (i, level) in levels.iter().enumerate() {
-                self.levels[i] = *level;
-            }
+        if let ControlEvent::OscMixer { ref levels } = *msg {
+            self.levels = levels.clone();
         }
         for i in 0..OSC_CNT {
             self.volume_envelopes[i].handle(msg);
