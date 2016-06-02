@@ -13,7 +13,8 @@ use dsp::SignalSource;
 const OSC_CNT: usize = 4;
 
 pub struct Voice {
-    levels: Vec<Float>,
+    fm_mod: Vec<Float>, // contains the mod indices
+    levels: Vec<Float>, // oscillator levels
     volume_envelopes: Vec<ADSR>,
     oscillators: Vec<WavetableOsc>,
 }
@@ -22,17 +23,26 @@ impl Voice {
            wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
            pitch_convert_handle: Rc<PitchConvert>)
            -> Self {
+        let levels = (0..OSC_CNT)
+            .map(|idx| if idx == 0 {
+                1.0
+            } else {
+                0.0
+            })
+            .collect::<Vec<_>>();
+        let oscillators = (0..OSC_CNT)
+            .map(|idx| {
+                WavetableOsc::with_id(format!("OSC{}", idx),
+                                      sample_rate,
+                                      wavetables.clone(),
+                                      pitch_convert_handle.clone())
+            })
+            .collect::<Vec<_>>();
         Voice {
-            levels: vec![1.0, 0.0, 0.0, 0.0],
+            fm_mod: vec![0.0; OSC_CNT * OSC_CNT],
+            levels: levels,
             volume_envelopes: vec![ADSR::new(sample_rate); OSC_CNT],
-            oscillators: (0..OSC_CNT)
-                .map(|idx| {
-                    WavetableOsc::with_id(format!("OSC{}", idx),
-                                          sample_rate,
-                                          wavetables.clone(),
-                                          pitch_convert_handle.clone())
-                })
-                .collect(),
+            oscillators: oscillators,
         }
     }
     fn running(&self) -> bool {
