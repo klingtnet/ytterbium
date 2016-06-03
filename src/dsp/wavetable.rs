@@ -234,9 +234,7 @@ pub struct WavetableOsc {
     phase_changed: bool,
     phasor: Float,
     transpose: i32, // transposition in octaves
-    volume: Float,
-    pan: Stereo,
-    last_frame: Stereo,
+    last_sample: Float,
     waveform: Waveform,
     id: String,
     pitch_convert: Rc<PitchConvert>,
@@ -257,9 +255,7 @@ impl WavetableOsc {
             phase_changed: false,
             phasor: 0.0,
             transpose: 0,
-            volume: MINUS_SIX_DB * MINUS_SIX_DB,
-            pan: Stereo(MINUS_THREE_DB, MINUS_THREE_DB),
-            last_frame: Stereo::default(),
+            last_sample: 0.0,
             waveform: Waveform::Sine,
             id: "".to_owned(),
             pitch_convert: pitch_convert,
@@ -287,15 +283,6 @@ impl WavetableOsc {
         self.waveform = waveform;
     }
 
-    pub fn set_volume(&mut self, volume: Float) {
-        let db = Float::from_db(volume);
-        self.volume = if db < -60.0 {
-            0.0
-        } else {
-            db
-        };
-    }
-
     pub fn set_phase(&mut self, phase: Float) {
         const PHASE_DELTA: Float = 0.01;
         if (self.phase - phase).abs() > PHASE_DELTA {
@@ -309,18 +296,16 @@ impl WavetableOsc {
     }
 
     /// Returns the next sample from the oscillator.
-    pub fn tick(&mut self) -> Stereo {
+    pub fn tick(&mut self) -> Float {
         let phasor = (self.phasor + self.phase).fract();
-        let sample = self.sample(phasor);
-        let mut frame = Stereo(sample, sample) * self.volume * self.pan;
+        let mut sample = self.sample(phasor);
         if self.phase_changed {
-            frame = (self.last_frame + frame) / 2.0;
+            sample = (self.last_sample + sample) / 2.0;
             self.phase_changed = false;
         }
-
         self.phasor += self.phase_incr;
-        self.last_frame = frame;
-        self.last_frame
+        self.last_sample = sample;
+        sample
     }
 
     /// Returns the sample from the appropriate band-limited wavetable.
@@ -342,7 +327,7 @@ impl WavetableOsc {
     fn reset(&mut self) {
         self.phase = 0.0;
         self.phasor = 0.0;
-        self.last_frame = Stereo::default();
+        self.last_sample = 0.0;
     }
 }
 
@@ -357,11 +342,6 @@ impl Controllable for WavetableOsc {
             ControlEvent::Waveform { ref id, waveform } => {
                 if *id == self.id {
                     self.set_waveform(waveform);
-                }
-            }
-            ControlEvent::Volume { ref id, volume } => {
-                if *id == self.id {
-                    self.set_volume(volume);
                 }
             }
             ControlEvent::Phase { ref id, phase } => {
@@ -390,23 +370,6 @@ impl Controllable for WavetableOsc {
                     self.set_freq(detuned_freq);
                 }
             }
-            ControlEvent::Pan { ref id, pan } => {
-                if *id == self.id {
-                    if feq!(pan, 0.0) {
-                        self.pan = Stereo(MINUS_THREE_DB, MINUS_THREE_DB);
-                    } else {
-                        // use a quadratic panning
-                        let pan_squared = pan * pan;
-                        let scale = if pan.signum() < 0.0 {
-                            Stereo((1.0 - MINUS_THREE_DB), MINUS_THREE_DB)
-                        } else {
-                            Stereo(MINUS_THREE_DB, (1.0 - MINUS_THREE_DB))
-                        };
-                        let delta = Stereo(-pan_squared, pan_squared) * scale * pan.signum();
-                        self.pan = Stereo(MINUS_THREE_DB, MINUS_THREE_DB) + delta;
-                    }
-                }
-            }
             _ => (),
         }
     }
@@ -420,10 +383,9 @@ fn test_wavetable_sweep() {
     let wavetables = Rc::new(generate_wavetables(LOW_FREQ, SAMPLE_RATE));
     let pitch_convert = Rc::new(PitchConvert::default());
     let mut osc = WavetableOsc::new(SAMPLE_RATE, wavetables, pitch_convert);
-    osc.set_volume(MINUS_THREE_DB);
 
     let wave_spec = hound::WavSpec {
-        channels: 2,
+        channels: 1,
         sample_rate: SAMPLE_RATE as u32,
         bits_per_sample: 32,
     };
@@ -446,9 +408,8 @@ fn test_wavetable_sweep() {
         let multiplier = 1.0 + ((LOW_FREQ * 1000.0).ln() - (LOW_FREQ).ln()) / num_samples as Float;
         for _ in 0..num_samples {
             osc.set_freq(freq);
-            let frame = osc.tick() * scale;
-            writer.write_sample(frame.0 as i32).unwrap();
-            writer.write_sample(frame.1 as i32).unwrap();
+            let sample = osc.tick() * scale;
+            writer.write_sample(sample as i32).unwrap();
             freq *= multiplier;
         }
         writer.finalize().unwrap();
@@ -464,7 +425,6 @@ fn test_wavetable_phase() {
     let wavetables = Rc::new(generate_wavetables(LOW_FREQ, SAMPLE_RATE));
     let pitch_convert = Rc::new(PitchConvert::default());
     let mut osc = WavetableOsc::new(SAMPLE_RATE, wavetables, pitch_convert);
-    osc.set_volume(0.0); // stereo -> both channels -3db :(
 
     for freq in &[1.0, 1000.0, ((SAMPLE_RATE >> 1) - 1) as Float] {
         osc.reset();
@@ -475,23 +435,22 @@ fn test_wavetable_phase() {
         let phase_incr = (2.0 * PI * freq) / SAMPLE_RATE as Float; // for reference sine
 
         for idx in 0..num_samples {
-            let frame = osc.tick();
-            let sine = Float::sin(phase_incr * idx as Float) * MINUS_THREE_DB;
-            let error = sine - frame.0;
+            let sample = osc.tick();
+            let sine = Float::sin(phase_incr * idx as Float);
+            let error = sine - sample;
             total_error += error * error; // squared error
         }
         assert_relative_eq!(total_error, 0.0, epsilon = EPSILON);
 
         // +90 degree: sin->cos
         osc.reset();
-        osc.last_frame = Stereo(MINUS_THREE_DB, MINUS_THREE_DB);
         total_error = 0.0;
         osc.set_phase(0.25);
 
         for idx in 0..num_samples {
-            let frame = osc.tick();
-            let cosine = Float::cos(phase_incr * idx as Float) * MINUS_THREE_DB;
-            let error = cosine - frame.0;
+            let sample = osc.tick();
+            let cosine = Float::cos(phase_incr * idx as Float);
+            let error = cosine - sample;
             total_error += error * error; // squared error
         }
         assert_relative_eq!(total_error, 0.0, epsilon = EPSILON);
@@ -502,9 +461,9 @@ fn test_wavetable_phase() {
         osc.set_phase(0.5);
 
         for idx in 0..num_samples {
-            let frame = osc.tick();
-            let sine = Float::sin(phase_incr * idx as Float + PI) * MINUS_THREE_DB;
-            let error = sine - frame.0;
+            let sample = osc.tick();
+            let sine = Float::sin(phase_incr * idx as Float + PI);
+            let error = sine - sample;
             total_error += error * error; // squared error
         }
         assert_relative_eq!(total_error, 0.0, epsilon = EPSILON);
@@ -515,9 +474,9 @@ fn test_wavetable_phase() {
         osc.set_phase(-0.5);
 
         for idx in 0..num_samples {
-            let frame = osc.tick();
-            let sine = Float::sin(phase_incr * idx as Float - PI) * MINUS_THREE_DB;
-            let error = sine - frame.0;
+            let sample = osc.tick();
+            let sine = Float::sin(phase_incr * idx as Float - PI);
+            let error = sine - sample;
             total_error += error * error; // squared error
         }
         assert_relative_eq!(total_error, 0.0, epsilon = EPSILON);
@@ -532,12 +491,11 @@ fn test_wavetable_fm() {
     let wavetables = Rc::new(generate_wavetables(LOW_FREQ, SAMPLE_RATE));
     let pitch_convert = Rc::new(PitchConvert::default());
     let mut carrier = WavetableOsc::new(SAMPLE_RATE, wavetables.clone(), pitch_convert.clone());
-    carrier.set_volume(MINUS_SIX_DB);
     let mut modulator = WavetableOsc::new(SAMPLE_RATE, wavetables.clone(), pitch_convert.clone());
     let num_samples = SAMPLE_RATE * 10;
 
     let wave_spec = hound::WavSpec {
-        channels: 2,
+        channels: 1,
         sample_rate: SAMPLE_RATE as u32,
         bits_per_sample: 32,
     };
@@ -557,11 +515,10 @@ fn test_wavetable_fm() {
 
     let mut writer = hound::WavWriter::create(filename, wave_spec).unwrap();
     for idx in 0..num_samples {
-        let mod_frame = modulator.tick();
-        let frame = carrier.tick();
-        carrier.set_phase(mod_frame.0 * mod_index);
-        writer.write_sample((frame.0 * scale) as i32).unwrap();
-        writer.write_sample((frame.1 * scale) as i32).unwrap();
+        let mod_sample = modulator.tick();
+        let sample = carrier.tick();
+        carrier.set_phase(mod_sample * mod_index);
+        writer.write_sample((sample * scale) as i32).unwrap();
         mod_index *= multiplier;
         modulator_freq *= freq_multiplier;
         modulator.set_freq(modulator_freq);

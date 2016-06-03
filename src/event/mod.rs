@@ -33,17 +33,8 @@ pub enum ControlEvent {
         id: String,
         waveform: Waveform,
     },
-    Volume {
-        id: String,
-        volume: Float,
-    },
-    OscMixer {
-        levels: Vec<Float>,
-    },
-    Pan {
-        id: String,
-        pan: Float,
-    },
+    Volume(Vec<Float>),
+    Pan(Vec<Float>),
     Phase {
         id: String,
         phase: Float,
@@ -56,9 +47,9 @@ pub enum ControlEvent {
         id: String,
         detune: i32,
     },
-    FmLevel {
+    FM {
         id: String,
-        levels: [Float; 3],
+        levels: Vec<Float>,
     },
 }
 

@@ -25,7 +25,6 @@ pub struct OscReceiver {
     socket: UdpSocket,
     buf: [u8; rosc::decoder::MTU],
     transpose: u8,
-    osc_mixer: (Float, Float),
     note_grid: [f32; GRID_SIZE + TRANSPOSE_RANGE * 12],
 }
 impl OscReceiver {
@@ -35,7 +34,6 @@ impl OscReceiver {
             socket: socket,
             buf: [0u8; rosc::decoder::MTU],
             transpose: 0u8,
-            osc_mixer: (0.0, 0.0),
             note_grid: [0.0; GRID_SIZE + TRANSPOSE_RANGE * 12],
         })
     }
@@ -124,21 +122,38 @@ impl OscReceiver {
         }
         // TODO: refactor this mess
         match address[0] {
+            "MIX" => {
+                match (address[1], address[2]) {
+                    ("PAN", "x") => {
+                        let args = msg.args
+                            .as_ref()
+                            .unwrap()
+                            .iter()
+                            .map(|arg| match *arg {
+                                OscType::Float(val) => val as Float,
+                                _ => 0.0,
+                            })
+                            .collect::<Vec<_>>();
+                        events.push(ControlEvent::Pan(args));
+                    }
+
+                    ("VOLUME", "x") => {
+                        let args = msg.args
+                            .as_ref()
+                            .unwrap()
+                            .iter()
+                            .map(|arg| match *arg {
+                                OscType::Float(val) => (1.0 - val as Float) * -61.0,
+                                _ => 0.0,
+                            })
+                            .collect::<Vec<_>>();
+                        events.push(ControlEvent::Volume(args));
+                    }
+                    _ => {}
+                }
+            }
             "FM" => {
                 match address[1] {
-                    "MIXER" => {
-                        let args = msg.args.as_ref().unwrap();
-                        if let OscType::Float(val) = args[0] {
-                            match address[2] {
-                                "x" => self.osc_mixer.0 = val as Float,
-                                "y" => self.osc_mixer.1 = val as Float,
-                                _ => {}
-                            }
-                            let (x, y) = self.osc_mixer;
-                            let levels = [(1.0 - x) * (1.0 - y), (1.0 - x) * y, x * y, x * (1.0 - y)].iter().map(|level| level.sqrt()).collect::<Vec<_>>();
-                            events.push(ControlEvent::OscMixer { levels: levels });
-                        }
-                    }
                     "OSC1" | "OSC2" | "OSC3" | "OSC4" => {
                         match (address[2], address[3]) {
                             ("LEVEL", "x") => {
@@ -151,12 +166,10 @@ impl OscReceiver {
                                         _ => 0.0,
                                     })
                                     .collect::<Vec<Float>>();
-                                if args.len() == 3 {
-                                    events.push(ControlEvent::FmLevel {
-                                        id: address[1].to_owned(),
-                                        levels: [args[0], args[1], args[2]],
-                                    });
-                                }
+                                events.push(ControlEvent::FM {
+                                    id: address[1].to_owned(),
+                                    levels: args,
+                                });
                             }
                             _ => {}
                         }
@@ -179,22 +192,14 @@ impl OscReceiver {
                                 }
                             })
                             .collect::<Vec<Float>>();
+                        let id_prefix: String = "ADSR-".to_owned();
                         events.push(ControlEvent::ADSR {
-                            id: address[0].to_owned(),
+                            id: id_prefix + address[0],
                             attack: 10.0 * args[0] as Time,
                             decay: 20.0 * args[1] as Time,
                             sustain: Float::from_db((1.0 - args[2]) * -40.0),
                             release: 20.0 * args[3] as Time,
                         });
-                    }
-                    ("VOLUME", "x") => {
-                        let args = msg.args.as_ref().unwrap();
-                        if let OscType::Float(volume) = args[0] {
-                            events.push(ControlEvent::Volume {
-                                id: address[0].to_owned(),
-                                volume: (1.0 - volume as Float) * -80.0,
-                            });
-                        }
                     }
                     ("PHASE", "x") => {
                         let args = msg.args.as_ref().unwrap();
@@ -220,15 +225,6 @@ impl OscReceiver {
                             events.push(ControlEvent::Detune {
                                 id: address[0].to_owned(),
                                 detune: (detune * 100.0) as i32,
-                            });
-                        }
-                    }
-                    ("PAN", "x") => {
-                        let args = msg.args.as_ref().unwrap();
-                        if let OscType::Float(pan) = args[0] {
-                            events.push(ControlEvent::Pan {
-                                id: address[0].to_owned(),
-                                pan: pan as Float,
                             });
                         }
                     }

@@ -15,6 +15,7 @@ const OSC_CNT: usize = 4;
 pub struct Voice {
     fm_mod: Vec<Float>, // contains the mod indices
     levels: Vec<Float>, // oscillator levels
+    pan: Vec<Stereo>,
     volume_envelopes: Vec<ADSR>,
     oscillators: Vec<WavetableOsc>,
 }
@@ -23,25 +24,27 @@ impl Voice {
            wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
            pitch_convert_handle: Rc<PitchConvert>)
            -> Self {
-        let levels = (0..OSC_CNT)
-            .map(|idx| if idx == 0 {
-                1.0
+        let mut levels = Vec::with_capacity(OSC_CNT);
+        let mut oscillators = Vec::with_capacity(OSC_CNT);
+        let mut volume_envelopes = Vec::with_capacity(OSC_CNT);
+        for idx in 0..OSC_CNT {
+            levels.push(if idx == 0 {
+                MINUS_THREE_DB
             } else {
                 0.0
-            })
-            .collect::<Vec<_>>();
-        let oscillators = (0..OSC_CNT)
-            .map(|idx| {
-                WavetableOsc::with_id(format!("OSC{}", idx),
-                                      sample_rate,
-                                      wavetables.clone(),
-                                      pitch_convert_handle.clone())
-            })
-            .collect::<Vec<_>>();
+            });
+            oscillators.push(WavetableOsc::with_id(format!("OSC{}", idx + 1),
+                                                   sample_rate,
+                                                   wavetables.clone(),
+                                                   pitch_convert_handle.clone()));
+            volume_envelopes.push(ADSR::with_id(sample_rate, format!("ADSR-OSC{}", idx+1)));
+        }
         Voice {
+            // use offset instead of nested vector
             fm_mod: vec![0.0; OSC_CNT * OSC_CNT],
             levels: levels,
-            volume_envelopes: vec![ADSR::new(sample_rate); OSC_CNT],
+            pan: vec![Stereo(MINUS_THREE_DB, MINUS_THREE_DB); OSC_CNT],
+            volume_envelopes: volume_envelopes,
             oscillators: oscillators,
         }
     }
@@ -49,21 +52,81 @@ impl Voice {
         self.volume_envelopes.iter().all(|envelope| envelope.state() != ADSRState::Off)
     }
     fn tick(&mut self) -> Stereo {
+        let mut samples = [0.0; OSC_CNT];
         let mut frame = Stereo::default();
-        for i in 0..OSC_CNT {
-            frame += self.oscillators[i].tick() * self.volume_envelopes[i].tick() * self.levels[i];
+        // tick each oscillator + apply env
+        for idx in 0..OSC_CNT {
+            samples[idx] = self.oscillators[idx].tick() * self.volume_envelopes[idx].tick();
+        }
+        // calculate phase mod for each oscillator
+        for idx in 0..OSC_CNT {
+            let phase = samples.iter()
+                .zip(self.fm_mod.iter().skip(idx * OSC_CNT).take(OSC_CNT))
+                .fold(0.0, |acc, (sample, mod_index)| acc + sample * mod_index);
+            self.oscillators[idx].set_phase(phase);
+            frame += Stereo(samples[idx], samples[idx]) * self.levels[idx] * self.pan[idx];
         }
         frame
     }
 }
 impl Controllable for Voice {
     fn handle(&mut self, msg: &ControlEvent) {
-        if let ControlEvent::OscMixer { ref levels } = *msg {
-            self.levels = levels.clone();
-        }
-        for i in 0..OSC_CNT {
-            self.volume_envelopes[i].handle(msg);
-            self.oscillators[i].handle(msg);
+        match *msg {
+            ControlEvent::Volume(ref volume) => {
+                for (old_vol, new_vol) in self.levels.iter_mut().zip(volume.iter()) {
+                    *old_vol = if *new_vol < -60.0 {
+                        0.0
+                    } else {
+                        Float::from_db(*new_vol)
+                    };
+                }
+            }
+            ControlEvent::Pan(ref pan) => {
+                for (old_pan, new_pan) in self.pan.iter_mut().zip(pan.iter()) {
+                    *old_pan = if feq!(new_pan, 0.0) {
+                        Stereo(MINUS_THREE_DB, MINUS_THREE_DB)
+                    } else {
+                        // use a quadratic panning
+                        let pan_squared = new_pan * new_pan;
+                        let scale = if new_pan.signum() < 0.0 {
+                            Stereo((1.0 - MINUS_THREE_DB), MINUS_THREE_DB)
+                        } else {
+                            Stereo(MINUS_THREE_DB, (1.0 - MINUS_THREE_DB))
+                        };
+                        let delta = Stereo(-pan_squared, pan_squared) * scale * new_pan.signum();
+                        Stereo(MINUS_THREE_DB, MINUS_THREE_DB) + delta
+                    }
+                }
+            }
+            ControlEvent::FM { ref id, ref levels } => {
+                let offset = match id.as_ref() {
+                    "OSC1" => 0,
+                    "OSC2" => 1,
+                    "OSC3" => 2,
+                    "OSC4" => 3,
+                    _ => ::std::usize::MAX,
+                };
+                for (idx, (old_level, new_level)) in self.fm_mod
+                    .iter_mut()
+                    .skip(offset)
+                    .take(OSC_CNT)
+                    .zip(levels.iter())
+                    .enumerate() {
+                    *old_level = if idx == offset {
+                        *new_level * 0.1 // feedback modulation easily creates feedback
+                    } else {
+                        *new_level
+                    };
+                }
+            }
+            _ => {
+                for osc in &mut self.oscillators {
+                    osc.handle(msg);
+                }
+                for env in &mut self.volume_envelopes {
+                    env.handle(msg);
+                }
+            }
         }
     }
 }

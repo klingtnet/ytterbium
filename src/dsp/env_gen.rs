@@ -22,7 +22,6 @@ impl ADSRState {
     }
 }
 
-#[derive(Copy, Clone)]
 pub struct ADSR {
     sample_rate: usize,
     attack: (Time, Float),
@@ -35,11 +34,18 @@ pub struct ADSR {
     velocity: Float,
     level: Float,
     target_level: Float,
+    id: String,
 }
 impl ADSR {
     pub fn new(sample_rate: usize) -> Self {
         let mut adsr = Self::default();
         adsr.sample_rate = sample_rate;
+        adsr
+    }
+
+    pub fn with_id<S: Into<String>>(sample_rate: usize, id: S) -> Self {
+        let mut adsr = Self::new(sample_rate);
+        adsr.id = id.into();
         adsr
     }
 
@@ -106,13 +112,15 @@ impl Controllable for ADSR {
                 self.velocity = Float::from_db((1.0 - velocity) * -30.0);
             }
             ControlEvent::NoteOff { .. } => self.state_change(ADSRState::Release),
-            ControlEvent::ADSR { attack, decay, sustain, release, .. } => {
+            ControlEvent::ADSR { ref id, attack, decay, sustain, release } => {
                 // check path
                 // TODO: make sure that all values are non-zero!
-                self.attack.0 = attack;
-                self.decay = decay;
-                self.sustain = sustain;
-                self.release = release;
+                if *id == self.id {
+                    self.attack.0 = attack;
+                    self.decay = decay;
+                    self.sustain = sustain;
+                    self.release = release;
+                }
             }
             _ => (),
         }
@@ -132,6 +140,7 @@ impl Default for ADSR {
             level: 0.0,
             velocity: 0.0,
             target_level: 1.0,
+            id: "".to_owned(),
         }
     }
 }
