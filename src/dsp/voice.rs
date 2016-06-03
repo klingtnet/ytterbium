@@ -104,8 +104,8 @@ impl Controllable for Voice {
                     "OSC2" => 1,
                     "OSC3" => 2,
                     "OSC4" => 3,
-                    _ => ::std::usize::MAX,
-                };
+                    _ => self.fm_mod.len(), // offset is larger than the length of the vector -> no modification
+                } * OSC_CNT;
                 for (idx, (old_level, new_level)) in self.fm_mod
                     .iter_mut()
                     .skip(offset)
