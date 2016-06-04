@@ -87,12 +87,12 @@ impl ops::Div<Stereo> for Stereo {
         Stereo(self.0 / rhs.0, self.1 / rhs.1)
     }
 }
-
 impl Default for Stereo {
     fn default() -> Self {
         Stereo(0.0, 0.0)
     }
 }
+
 #[test]
 fn test_stereo() {
     // It would be better to make a relative equality check with some error epsilon. But
@@ -109,7 +109,6 @@ fn test_stereo() {
 }
 
 pub const MINUS_THREE_DB: Float = 0.7079457843841379;
-pub const MINUS_SIX_DB: Float = MINUS_THREE_DB * MINUS_THREE_DB;
 
 /// Defines conversion methods from a plain `1/x` power ratio into db and vice versa.
 pub trait Db {

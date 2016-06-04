@@ -37,7 +37,7 @@ impl Voice {
                                                    sample_rate,
                                                    wavetables.clone(),
                                                    pitch_convert_handle.clone()));
-            volume_envelopes.push(ADSR::with_id(sample_rate, format!("ADSR-OSC{}", idx+1)));
+            volume_envelopes.push(ADSR::with_id(sample_rate, format!("ADSR-OSC{}", idx + 1)));
         }
         Voice {
             // use offset instead of nested vector
@@ -55,16 +55,22 @@ impl Voice {
         let mut samples = [0.0; OSC_CNT];
         let mut frame = Stereo::default();
         // tick each oscillator + apply env
-        for idx in 0..OSC_CNT {
-            samples[idx] = self.oscillators[idx].tick() * self.volume_envelopes[idx].tick();
+        for (sample, (oscillator, envelope)) in samples.iter_mut()
+            .zip(self.oscillators.iter_mut().zip(self.volume_envelopes.iter_mut()))
+            .take(OSC_CNT) {
+            *sample = oscillator.tick() * envelope.tick();
         }
         // calculate phase mod for each oscillator
-        for idx in 0..OSC_CNT {
+        for (idx, (oscillator, (sample, (level, pan)))) in self.oscillators
+            .iter_mut()
+            .zip(samples.iter().zip(self.levels.iter().zip(self.pan.iter())))
+            .take(OSC_CNT)
+            .enumerate() {
             let phase = samples.iter()
                 .zip(self.fm_mod.iter().skip(idx * OSC_CNT).take(OSC_CNT))
                 .fold(0.0, |acc, (sample, mod_index)| acc + sample * mod_index);
-            self.oscillators[idx].set_phase(phase);
-            frame += Stereo(samples[idx], samples[idx]) * self.levels[idx] * self.pan[idx];
+            oscillator.set_phase(phase);
+            frame += Stereo(*sample, *sample) * *level * *pan;
         }
         frame
     }

@@ -14,6 +14,7 @@ impl SignalLink for HardLimiter {
         output
     }
 }
+
 pub struct SoftLimiter {}
 impl SignalLink for SoftLimiter {
     fn tick(&mut self, input: Stereo) -> Stereo {

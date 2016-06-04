@@ -113,6 +113,7 @@ impl OscReceiver {
             _ => {}
         }
     }
+
     fn handle_oscillators(&mut self,
                           msg: &OscMessage,
                           address: &[&str],
@@ -155,23 +156,20 @@ impl OscReceiver {
             "FM" => {
                 match address[1] {
                     "OSC1" | "OSC2" | "OSC3" | "OSC4" => {
-                        match (address[2], address[3]) {
-                            ("LEVEL", "x") => {
-                                let args = msg.args
-                                    .as_ref()
-                                    .unwrap()
-                                    .iter()
-                                    .map(|arg| match *arg {
-                                        OscType::Float(val) => val as Float,
-                                        _ => 0.0,
-                                    })
-                                    .collect::<Vec<Float>>();
-                                events.push(ControlEvent::FM {
-                                    id: address[1].to_owned(),
-                                    levels: args,
-                                });
-                            }
-                            _ => {}
+                        if let ("LEVEL", "x") = (address[2], address[3]) {
+                            let args = msg.args
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|arg| match *arg {
+                                    OscType::Float(val) => val as Float,
+                                    _ => 0.0,
+                                })
+                                .collect::<Vec<Float>>();
+                            events.push(ControlEvent::FM {
+                                id: address[1].to_owned(),
+                                levels: args,
+                            });
                         }
                     }
                     _ => {}
