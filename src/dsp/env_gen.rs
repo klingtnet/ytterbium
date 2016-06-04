@@ -129,10 +129,10 @@ impl Controllable for ADSR {
 impl Default for ADSR {
     fn default() -> Self {
         ADSR {
-            attack: (0.05, Float::from_db(-3.0)),
-            decay: 0.25,
+            attack: (0.02, MINUS_THREE_DB),
+            decay: 0.2,
             sustain: Float::from_db(-12.0),
-            release: 1.5,
+            release: 0.6,
             sample_rate: 48_000,
             state: ADSRState::Off,
             ticks_left: 0,
