@@ -234,6 +234,7 @@ fn test_short_envelope() {
     ticks = (adsr.release * sample_rate as Time) as isize;
     while ticks > 0 {
         level = adsr.tick();
+        assert!(level > 0.0);
         ticks -= 1;
     }
     assert_relative_eq!(level, 0.0, epsilon = TEST_EPSILON);
@@ -284,6 +285,7 @@ fn test_long_envelope() {
     ticks = (adsr.release * sample_rate as Time) as isize;
     while ticks > 0 {
         level = adsr.tick();
+        assert!(level > 0.0);
         ticks -= 1;
     }
     assert_relative_eq!(level, 0.0, epsilon = TEST_EPSILON);
