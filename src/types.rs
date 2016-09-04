@@ -45,6 +45,27 @@ impl ops::AddAssign<Stereo> for Stereo {
         self.1 += rhs.1;
     }
 }
+/// Overload subtraction for `Stereo` frame.
+impl ops::Sub<Stereo> for Stereo {
+    type Output = Stereo;
+
+    fn sub(self, rhs: Stereo) -> Self {
+        Stereo(self.0 - rhs.0, self.1 - rhs.1)
+    }
+}
+impl ops::Sub<Float> for Stereo {
+    type Output = Stereo;
+
+    fn sub(self, rhs: Float) -> Self {
+        Stereo(self.0 - rhs, self.1 - rhs)
+    }
+}
+impl ops::SubAssign<Stereo> for Stereo {
+    fn sub_assign(&mut self, rhs: Stereo) {
+        self.0 -= rhs.0;
+        self.1 -= rhs.1;
+    }
+}
 /// Overload multiplication for `Stereo` frame.
 impl ops::Mul<Stereo> for Stereo {
     type Output = Stereo;
@@ -99,6 +120,8 @@ fn test_stereo() {
     // therefore `Sub` and  `abs()` had to be implemented for `Stereo`.
     let (a, b) = (Stereo(1.0, 2.0), Stereo(2.0, 4.0));
     assert_eq!(a + b, Stereo(3.0, 6.0));
+    assert_eq!(a - b, Stereo(-1.0, -2.0));
+    assert_eq!(b - a, Stereo(1.0, 2.0));
     assert_eq!(a * b, Stereo(2.0, 8.0));
     assert_eq!(a * 3.0, Stereo(3.0, 6.0));
     let mut x = Stereo::default();
