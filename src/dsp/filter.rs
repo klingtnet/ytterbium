@@ -17,7 +17,6 @@ pub struct Filter {
     a: Float,
     coeffs: ([Float; 2], [Float; 3]),
     Xs: [Stereo; 2],
-    Ys: [Stereo; 2],
 }
 impl Filter {
     fn new(sample_rate: usize, fc: Float, filter_type: &FilterType) -> Self {
@@ -32,7 +31,6 @@ impl Filter {
             a: 1.0, // unity gain
             coeffs: (As, Bs),
             Xs: [Stereo::default(); 2],
-            Ys: [Stereo::default(); 2],
         }
     }
 
@@ -92,8 +90,6 @@ impl SignalLink for Filter {
         let out = fw * Bs[0] + self.Xs[0] * Bs[1] + self.Xs[1] * Bs[2];
         self.Xs[1] = self.Xs[0];
         self.Xs[0] = fw;
-        self.Ys[1] = self.Ys[0];
-        self.Ys[0] = out;
         out
     }
 }
