@@ -2,11 +2,11 @@ use types::{SharedMut, Stereo, Wrap};
 
 use event::{Controllable, ControlEvent};
 use rb::{RbProducer, Producer};
-use dsp::{SignalSource, SignalLink, SignalSink, SignalFlow, VoiceManager, SoftLimiter};
+use dsp::{SignalSource, SignalLink, ControllableLink, SignalSink, SignalFlow, VoiceManager, SoftLimiter, Filter};
 
 pub struct Flow {
     source: VoiceManager,
-    links: Vec<SharedMut<SignalLink>>,
+    links: Vec<SharedMut<ControllableLink>>,
     sink: BufferSink,
 }
 impl Flow {
@@ -23,7 +23,9 @@ impl Controllable for Flow {
         match *msg {
             _ => {
                 self.source.handle(msg);
-                // TODO: send to all links
+                for link in &self.links {
+                    link.borrow_mut().handle(msg)
+                }
             }
         }
     }

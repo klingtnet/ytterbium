@@ -1,5 +1,6 @@
 use types::{Float, Stereo, PI};
-use dsp::SignalLink;
+use dsp::ControllableLink;
+use event::ControlEvent;
 
 #[derive(Debug,Clone,Copy)]
 enum FilterType {
@@ -98,7 +99,7 @@ impl Filter {
     }
 }
 
-impl SignalLink for Filter {
+impl ControllableLink for Filter {
     fn tick(&mut self, input: Stereo) -> Stereo {
         let (As, Bs) = self.coeffs;
         let fw = input - self.Xs[0] * As[0] - self.Xs[1] * As[1];
@@ -107,6 +108,7 @@ impl SignalLink for Filter {
         self.Xs[0] = fw;
         out
     }
+    fn handle(&mut self, msg: &ControlEvent) {}
 }
 
 #[cfg(test)]
@@ -115,7 +117,7 @@ mod tests {
     extern crate rand;
 
     use super::{Filter, FilterType};
-    use super::super::SignalLink;
+    use super::super::ControllableLink;
     use types::{Float, Stereo, MINUS_THREE_DB};
     use self::rand::distributions::{IndependentSample, Range};
 

@@ -1,5 +1,6 @@
 use types::Stereo;
-use dsp::SignalLink;
+use dsp::{SignalLink, ControllableLink};
+use event::ControlEvent;
 
 pub struct HardLimiter {}
 impl SignalLink for HardLimiter {
@@ -16,7 +17,7 @@ impl SignalLink for HardLimiter {
 }
 
 pub struct SoftLimiter {}
-impl SignalLink for SoftLimiter {
+impl ControllableLink for SoftLimiter {
     fn tick(&mut self, input: Stereo) -> Stereo {
         // Padé approximation for tanh
         // http://www.musicdsp.org/showone.php?id=238
@@ -26,5 +27,7 @@ impl SignalLink for SoftLimiter {
             (false, true) => Stereo(input.0, input.1.signum()),
             _ => Stereo(input.0.signum(), input.1.signum()),
         }
+    }
+    fn handle(&mut self, msg: &ControlEvent) {
     }
 }
