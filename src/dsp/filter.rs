@@ -89,6 +89,7 @@ mod tests {
         const SAMPLE_RATE: usize = 48_000;
         let LOW_FREQ = 100.0;
         let mut filter = Filter::new(SAMPLE_RATE, LOW_FREQ);
+        let filter_type = super::FilterType::LP;
         let num_samples = SAMPLE_RATE * 10;
 
         let wave_spec = hound::WavSpec {
@@ -98,7 +99,7 @@ mod tests {
             bits_per_sample: 32,
         };
         let scale = ::std::i32::MAX as Float;
-        let filename = format!("ytterbium-{}-filter.wav", env!("CARGO_PKG_VERSION"));
+        let filename = format!("ytterbium-{}-{:?}-filter.wav", env!("CARGO_PKG_VERSION"), filter_type);
         let mut writer = hound::WavWriter::create(filename, wave_spec).unwrap();
 
         let range = Range::new(-MINUS_THREE_DB, MINUS_THREE_DB);
