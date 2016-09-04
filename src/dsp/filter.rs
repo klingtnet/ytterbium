@@ -79,7 +79,7 @@ mod tests {
     extern crate hound;
     extern crate rand;
 
-    use super::*;
+    use super::{Filter,FilterType};
     use super::super::SignalLink;
     use types::{Float,Stereo,MINUS_THREE_DB};
     use self::rand::distributions::{IndependentSample, Range};
@@ -89,7 +89,7 @@ mod tests {
         const SAMPLE_RATE: usize = 48_000;
         let LOW_FREQ = 100.0;
         let mut filter = Filter::new(SAMPLE_RATE, LOW_FREQ);
-        let filter_type = super::FilterType::LP;
+        let filter_type = FilterType::LP;
         let num_samples = SAMPLE_RATE * 10;
 
         let wave_spec = hound::WavSpec {
