@@ -160,6 +160,6 @@ fn test_conversion() {
     assert_relative_eq!(-80.0, Float::to_db(0.0001));
     assert_relative_eq!(0.0, Float::to_db(1.0));
     assert_relative_eq!(6.0, Float::to_db(2.0), epsilon = 0.03);
-    assert_relative_eq!(MINUS_SIX_DB, Float::from_db(-6.0));
+    assert_relative_eq!(MINUS_THREE_DB * MINUS_THREE_DB, Float::from_db(-6.0));
     assert_relative_eq!(MINUS_THREE_DB, Float::from_db(-3.0));
 }
