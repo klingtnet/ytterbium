@@ -54,6 +54,10 @@ impl Filter {
         }
         (As, Bs)
     }
+
+    fn set_freq(&mut self, freq: Float) {
+        self.coeffs = Filter::coeffs(2.0 * PI * freq / self.sample_rate as Float, self.q, FilterType::LP)
+    }
 }
 
 impl SignalLink for Filter {
@@ -82,8 +86,9 @@ mod tests {
     #[test]
     fn test_filter() {
         const SAMPLE_RATE: usize = 48_000;
-        let mut filter = Filter::new(SAMPLE_RATE, 4400.0);
-        let num_samples = SAMPLE_RATE * 1;
+        let LOW_FREQ = 100.0;
+        let mut filter = Filter::new(SAMPLE_RATE, LOW_FREQ);
+        let num_samples = SAMPLE_RATE * 10;
 
         let wave_spec = hound::WavSpec {
             channels: 2,
@@ -98,11 +103,16 @@ mod tests {
         let range = Range::new(-MINUS_THREE_DB, MINUS_THREE_DB);
         let mut rng = rand::thread_rng();
 
+        let multiplier = 1.0 + ((20_000.0 as Float).ln() - (LOW_FREQ).ln()) / num_samples as Float;
+        let mut freq = LOW_FREQ;
+
         for idx in 0..num_samples {
             let r = range.ind_sample(&mut rng);
             let out = filter.tick(Stereo(r, r));
             writer.write_sample((out.0 * scale) as i32).unwrap();
             writer.write_sample((out.1 * scale) as i32).unwrap();
+            freq *= multiplier;
+            filter.set_freq(freq);
         }
         writer.finalize().unwrap();
     }
