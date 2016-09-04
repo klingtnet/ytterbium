@@ -1,14 +1,20 @@
 use types::{Float, Stereo, PI};
 use dsp::SignalLink;
 
+enum FilterType {
+    LP,
+    HP,
+    BP,
+    Notch,
+}
+
 pub struct Filter {
     sample_rate: usize,
     fc: Float,
     q: Float,
     w: Float,
     a: Float,
-    alpha: Float,
-    coeffs: ([Float; 3], [Float; 3]),
+    coeffs: ([Float; 2], [Float; 3]),
     Xs: [Stereo; 2],
     Ys: [Stereo; 2],
 }
@@ -16,35 +22,45 @@ impl Filter {
     fn new(sample_rate: usize, fc: Float) -> Self {
         let w = 2.0 * PI * fc / sample_rate as Float;
         let q = 1.0;
-        let (sinw, cosw) = (Float::sin(w), Float::cos(w));
-        let (mut As, mut Bs) = ([0.; 3], [0.; 3]);
-        let alpha = sinw / (2.0 * q);
-        // divide others through As[0]
-        As[0] = 1. + alpha;
-        As[1] = -2. * cosw;
-        As[2] = 1. - alpha;
-        Bs[0] = (1. - cosw) / 2.;
-        Bs[1] = 1. - cosw;
-        Bs[2] = (1. - cosw) / 2.;
+        let (As, Bs) = Filter::coeffs(w, q, FilterType::LP);
         Filter {
             sample_rate: sample_rate,
             fc: fc,
             q: q,
             w: w,
             a: 1.0, // unity gain
-            alpha: alpha,
             coeffs: (As, Bs),
             Xs: [Stereo::default(); 2],
             Ys: [Stereo::default(); 2],
         }
+    }
+
+    fn coeffs(w: Float, q: Float, filter_type: FilterType) -> ([Float; 2], [Float; 3]) {
+        let (sinw, cosw) = (Float::sin(w), Float::cos(w));
+        let (mut As, mut Bs) = ([0.; 2], [0.; 3]);
+        let alpha = sinw / (2.0 * q);
+
+        let a0 = 1. + alpha;
+        // normalize by dividing through a0
+        match filter_type {
+            FilterType::LP => {
+                As[0] = -2. * cosw / a0;
+                As[1] = (1. - alpha) / a0;
+                Bs[0] = (1. - cosw) * 0.5 / a0;
+                Bs[1] = (1. - cosw) / a0;
+                Bs[2] = (1. - cosw) * 0.5 / a0;
+            }
+            _ => unimplemented!(),
+        }
+        (As, Bs)
     }
 }
 
 impl SignalLink for Filter {
     fn tick(&mut self, input: Stereo) -> Stereo {
         let (As, Bs) = self.coeffs;
-        let fw = input - self.Xs[0]*(As[1]/As[0]) - self.Xs[1]*(As[2]/As[0]);
-        let out = fw*(Bs[0]/As[0]) + self.Xs[0]*(Bs[1]/As[0]) + self.Xs[1]*(Bs[2]/As[0]);
+        let fw = input - self.Xs[0] * As[0] - self.Xs[1] * As[1];
+        let out = fw * Bs[0] + self.Xs[0] * Bs[1] + self.Xs[1] * Bs[2];
         self.Xs[1] = self.Xs[0];
         self.Xs[0] = fw;
         self.Ys[1] = self.Ys[0];
