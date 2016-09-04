@@ -20,7 +20,7 @@ pub struct Filter {
     Xs: [Stereo; 2],
 }
 impl Filter {
-    fn new(sample_rate: usize) -> Self {
+    pub fn new(sample_rate: usize) -> Self {
         let fc = sample_rate as Float / 2.;
         let w = 2.0 * PI * fc / sample_rate as Float;
         let q = 1.0;
