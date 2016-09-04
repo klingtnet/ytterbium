@@ -11,6 +11,7 @@ enum FilterType {
 
 pub struct Filter {
     sample_rate: usize,
+    filter_type: FilterType,
     fc: Float,
     q: Float,
     w: Float,
@@ -19,12 +20,15 @@ pub struct Filter {
     Xs: [Stereo; 2],
 }
 impl Filter {
-    fn new(sample_rate: usize, fc: Float, filter_type: &FilterType) -> Self {
+    fn new(sample_rate: usize) -> Self {
+        let fc = sample_rate as Float / 2.;
         let w = 2.0 * PI * fc / sample_rate as Float;
         let q = 1.0;
+        let filter_type = FilterType::LP;
         let (As, Bs) = Filter::coeffs(w, q, filter_type);
         Filter {
             sample_rate: sample_rate,
+            filter_type: filter_type,
             fc: fc,
             q: q,
             w: w,
@@ -34,7 +38,7 @@ impl Filter {
         }
     }
 
-    fn coeffs(w: Float, q: Float, filter_type: &FilterType) -> ([Float; 2], [Float; 3]) {
+    fn coeffs(w: Float, q: Float, filter_type: FilterType) -> ([Float; 2], [Float; 3]) {
         let (sinw, cosw) = (Float::sin(w), Float::cos(w));
         let (mut As, mut Bs) = ([0.; 2], [0.; 3]);
         let alpha = sinw / (2.0 * q);
@@ -43,7 +47,7 @@ impl Filter {
         As[0] = -2. * cosw;
         As[1] = 1. - alpha;
         // only zeros differ
-        match *filter_type {
+        match filter_type {
             FilterType::LP => {
                 Bs[0] = (1. - cosw) / 2.;
                 Bs[1] = 1. - cosw;
@@ -72,14 +76,25 @@ impl Filter {
         (As, Bs)
     }
 
-    fn set_freq(&mut self, freq: Float, filter_type: &FilterType) {
-        self.coeffs = Filter::coeffs(2.0 * PI * freq / self.sample_rate as Float,
-                                     self.q,
-                                     filter_type)
+    fn set_freq(&mut self, freq: Float) {
+        self.w = 2.0 * PI * freq / self.sample_rate as Float;
+        self.update_coeffs()
     }
 
     fn set_q(&mut self, q: Float) {
-        unimplemented!()
+        self.q = q;
+        self.update_coeffs()
+    }
+
+    fn update_coeffs(&mut self) {
+        self.coeffs = Filter::coeffs(self.w,
+                                     self.q,
+                                     self.filter_type)
+    }
+
+    fn set_filter_type(&mut self, filter_type: FilterType) {
+        self.filter_type = filter_type;
+        self.update_coeffs()
     }
 }
 
@@ -131,7 +146,11 @@ mod tests {
                 FilterType::HP => end_freq,
                 _ => start_freq,
             };
-            let mut filter = Filter::new(SAMPLE_RATE, freq, filter_type);
+            let mut filter = Filter::new(SAMPLE_RATE);
+            filter.set_freq(start_freq);
+            let q = 1.0;
+            filter.set_q(q);
+            filter.set_filter_type(*filter_type);
 
             let multiplier = 1.0 +
                              ((end_freq as Float).ln() - (start_freq).ln()) / num_samples as Float;
@@ -144,8 +163,8 @@ mod tests {
                 freq = match *filter_type {
                     FilterType::LP | FilterType::BP | FilterType::Notch => freq * multiplier,
                     FilterType::HP => freq / multiplier,
-                };
-                filter.set_freq(freq, filter_type);
+            };
+            filter.set_freq(freq);
             }
             writer.finalize().unwrap();
         }
