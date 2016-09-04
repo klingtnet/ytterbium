@@ -1,7 +1,7 @@
 use types::{Float, Stereo, PI};
 use dsp::SignalLink;
 
-#[derive(Debug)]
+#[derive(Debug,Clone,Copy)]
 enum FilterType {
     LP,
     HP,
