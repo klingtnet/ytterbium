@@ -71,6 +71,7 @@ mod tests {
 
         let wave_spec = hound::WavSpec {
             channels: 2,
+            sample_format: hound::SampleFormat::Int,
             sample_rate: SAMPLE_RATE as u32,
             bits_per_sample: 32,
         };

@@ -386,6 +386,7 @@ fn test_wavetable_sweep() {
 
     let wave_spec = hound::WavSpec {
         channels: 1,
+        sample_format: hound::SampleFormat::Int,
         sample_rate: SAMPLE_RATE as u32,
         bits_per_sample: 32,
     };
@@ -496,6 +497,7 @@ fn test_wavetable_fm() {
 
     let wave_spec = hound::WavSpec {
         channels: 1,
+        sample_format: hound::SampleFormat::Int,
         sample_rate: SAMPLE_RATE as u32,
         bits_per_sample: 32,
     };
