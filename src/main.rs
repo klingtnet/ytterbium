@@ -170,7 +170,7 @@ fn run(args: Args) -> Result<(), RunError> {
                            move || {
                 let source = VoiceManager::new(MAX_VOICES, sample_rate);
                 let sink = BufferSink::new(producer, 64);
-                let mut flow = Flow::new(source, sink);
+                let mut flow = Flow::new(source, sink, sample_rate);
                 init.wait();
                 loop {
                     if quit.load(Ordering::Relaxed) {

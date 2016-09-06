@@ -10,10 +10,10 @@ pub struct Flow {
     sink: BufferSink,
 }
 impl Flow {
-    pub fn new(source: VoiceManager, sink: BufferSink) -> Self {
+    pub fn new(source: VoiceManager, sink: BufferSink, sample_rate: usize) -> Self {
         Flow {
             source: source,
-            links: vec![SharedMut::wrap(SoftLimiter {})],
+            links: vec![SharedMut::wrap(Filter::new(sample_rate)), SharedMut::wrap(SoftLimiter {})],
             sink: sink,
         }
     }
