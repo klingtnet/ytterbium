@@ -3,6 +3,9 @@ target/
 *.rlib
 .vscode/
 *.wav
+ytterbium-*.png
+ytterbium-*.mp4
+ytterbium-*.bin
 *.swp
 vim.session
 ytterbium-*-sweep.png
