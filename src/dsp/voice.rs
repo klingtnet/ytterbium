@@ -1,4 +1,7 @@
+extern crate itertools;
+
 use std::collections::{VecDeque, HashMap};
+use self::itertools::Zip;
 
 use std::rc::Rc;
 use types::*;
@@ -55,22 +58,22 @@ impl Voice {
         let mut samples = [0.0; OSC_CNT];
         let mut frame = Stereo::default();
         // tick each oscillator + apply env
-        for (sample, (oscillator, envelope)) in samples.iter_mut()
-            .zip(self.oscillators.iter_mut().zip(self.volume_envelopes.iter_mut()))
-            .take(OSC_CNT) {
-            *sample = oscillator.tick() * envelope.tick();
-        }
-        // calculate phase mod for each oscillator
-        for (idx, (oscillator, (sample, (level, pan)))) in self.oscillators
-            .iter_mut()
-            .zip(samples.iter().zip(self.levels.iter().zip(self.pan.iter())))
+        for (idx, (sample, oscillator, envelope, level, pan)) in
+            Zip::new((&mut samples,
+                      &mut self.oscillators,
+                      &mut self.volume_envelopes,
+                      &self.levels,
+                      &self.pan))
             .take(OSC_CNT)
             .enumerate() {
-            let phase = samples.iter()
-                .zip(self.fm_mod.iter().skip(idx * OSC_CNT).take(OSC_CNT))
-                .fold(0.0, |acc, (sample, mod_index)| acc + sample * mod_index);
-            oscillator.set_phase(phase);
+            *sample = oscillator.tick() * envelope.tick();
             frame += Stereo(*sample, *sample) * *level * *pan;
+        }
+        for (idx, oscillator) in self.oscillators.iter_mut().enumerate() {
+            let phase = Zip::new((&mut samples, self.fm_mod.iter().skip(idx * OSC_CNT)))
+                .take(OSC_CNT)
+                .fold(0.0, |acc, (sample, mod_index)| acc + *sample * mod_index);
+            oscillator.set_phase(phase);
         }
         frame
     }
