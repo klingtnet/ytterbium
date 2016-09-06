@@ -3,7 +3,7 @@ extern crate portmidi;
 
 use types::*;
 
-use dsp::Waveform;
+use dsp::{Waveform,FilterType};
 
 macro_rules! feq {
     ($lhs:expr, $rhs:expr) => {
@@ -51,6 +51,11 @@ pub enum ControlEvent {
         id: String,
         levels: Vec<Float>,
     },
+    Filter {
+        filter_type: Option<FilterType>,
+        freq: Option<Float>,
+        q: Option<Float>,
+    }
 }
 
 pub trait Controllable {

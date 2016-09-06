@@ -9,7 +9,7 @@ use std::sync::mpsc;
 use io::Receiver;
 
 use event::ControlEvent;
-use dsp::Waveform;
+use dsp::{Waveform, FilterType};
 use types::*;
 
 macro_rules! exp_scale {
@@ -123,6 +123,52 @@ impl OscReceiver {
         }
         // TODO: refactor this mess
         match address[0] {
+            "FILTER" => {
+                match (address[1], address[2]) {
+                    ("FILTERTYPE", "selection") => {
+                        let args = msg.args.as_ref().unwrap();
+                        if let OscType::Float(selection) = args[0] {
+                            let filter_type = match selection as usize {
+                                0 => Some(FilterType::LP),
+                                1 => Some(FilterType::HP),
+                                2 => Some(FilterType::BP),
+                                3 => Some(FilterType::Notch),
+                                _ => None,
+                            };
+                            events.push(ControlEvent::Filter { filter_type: filter_type,
+                                freq: None,
+                                q: None,
+                            })
+                        }
+                    }
+                    ("FREQRES", _) => {
+                        match address[2] {
+                            "x" => {
+                                let args = msg.args.as_ref().unwrap();
+                                if let OscType::Float(freq) = args[0] {
+                                    events.push(ControlEvent::Filter {
+                                        filter_type: None,
+                                        freq: Some(40. + 20_000.0 * freq as Float),
+                                        q: None,
+                                    });
+                                }
+                            }
+                            "y" => {
+                                let args = msg.args.as_ref().unwrap();
+                                if let OscType::Float(q) = args[0] {
+                                    events.push(ControlEvent::Filter {
+                                        filter_type: None,
+                                        freq: None,
+                                        q: Some(4. * q as Float),
+                                    });
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
+            }
             "MIX" => {
                 match (address[1], address[2]) {
                     ("PAN", "x") => {

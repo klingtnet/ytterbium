@@ -3,7 +3,7 @@ use dsp::ControllableLink;
 use event::ControlEvent;
 
 #[derive(Debug,Clone,Copy)]
-enum FilterType {
+pub enum FilterType {
     LP,
     HP,
     BP,
@@ -108,7 +108,23 @@ impl ControllableLink for Filter {
         self.Xs[0] = fw;
         out
     }
-    fn handle(&mut self, msg: &ControlEvent) {}
+    fn handle(&mut self, msg: &ControlEvent) {
+        match *msg {
+            ControlEvent::Filter { filter_type, freq, q } => {
+                if let Some(some_type) = filter_type {
+                    self.set_filter_type(some_type)
+                }
+                if let Some(some_freq) = freq {
+                    self.set_freq(some_freq);
+                }
+                if let Some(some_q) = q {
+                    self.set_q(some_q)
+                }
+
+            }
+            _ => {}
+        }
+    }
 }
 
 #[cfg(test)]
