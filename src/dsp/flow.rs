@@ -2,7 +2,8 @@ use types::{SharedMut, Stereo, Wrap};
 
 use event::{Controllable, ControlEvent};
 use rb::{RbProducer, Producer};
-use dsp::{SignalSource, SignalLink, ControllableLink, SignalSink, SignalFlow, VoiceManager, SoftLimiter, Filter};
+use dsp::{SignalSource, SignalLink, ControllableLink, SignalSink, SignalFlow, VoiceManager,
+          SoftLimiter, Filter};
 
 pub struct Flow {
     source: VoiceManager,

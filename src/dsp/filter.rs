@@ -88,9 +88,7 @@ impl Filter {
     }
 
     fn update_coeffs(&mut self) {
-        self.coeffs = Filter::coeffs(self.w,
-                                     self.q,
-                                     self.filter_type)
+        self.coeffs = Filter::coeffs(self.w, self.q, self.filter_type)
     }
 
     fn set_filter_type(&mut self, filter_type: FilterType) {
@@ -181,8 +179,8 @@ mod tests {
                 freq = match *filter_type {
                     FilterType::LP | FilterType::BP | FilterType::Notch => freq * multiplier,
                     FilterType::HP => freq / multiplier,
-            };
-            filter.set_freq(freq);
+                };
+                filter.set_freq(freq);
             }
             writer.finalize().unwrap();
         }

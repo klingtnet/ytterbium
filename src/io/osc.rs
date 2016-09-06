@@ -135,7 +135,8 @@ impl OscReceiver {
                                 3 => Some(FilterType::Notch),
                                 _ => None,
                             };
-                            events.push(ControlEvent::Filter { filter_type: filter_type,
+                            events.push(ControlEvent::Filter {
+                                filter_type: filter_type,
                                 freq: None,
                                 q: None,
                             })
