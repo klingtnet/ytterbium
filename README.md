@@ -2,5 +2,4 @@
 
 - polyphonic
 - controllable via [OpenSoundControl](https://en.wikipedia.org/wiki/Open_Sound_Control)
-- cross-platform (check this)
-- web-based GUI
+- see my [master's thesis](https://github.com/klingtnet/master-thesis) for a detailed documentation of this synthesizer
