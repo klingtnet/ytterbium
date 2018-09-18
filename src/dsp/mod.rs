@@ -1,19 +1,19 @@
-use types::Stereo;
 use event::ControlEvent;
+use types::Stereo;
 
-mod env_gen;
-mod wavetable;
-mod voice;
-mod flow;
 mod dynamics;
+mod env_gen;
 mod filter;
+mod flow;
+mod voice;
+mod wavetable;
 
-pub use self::env_gen::{ADSR, ADSRState};
-pub use self::wavetable::{Wavetable, WavetableOsc, generate_wavetables, Waveform};
-pub use self::voice::VoiceManager;
-pub use self::flow::{Flow, BufferSink};
 pub use self::dynamics::{HardLimiter, SoftLimiter};
+pub use self::env_gen::{ADSRState, ADSR};
 pub use self::filter::{Filter, FilterType};
+pub use self::flow::{BufferSink, Flow};
+pub use self::voice::VoiceManager;
+pub use self::wavetable::{generate_wavetables, Waveform, Wavetable, WavetableOsc};
 
 pub trait SignalSource {
     fn tick(&mut self) -> Stereo;

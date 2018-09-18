@@ -1,17 +1,17 @@
-extern crate rosc;
 extern crate portmidi;
+extern crate rosc;
 
 use types::*;
 
-use dsp::{Waveform, FilterType};
+use dsp::{FilterType, Waveform};
 
 macro_rules! feq {
     ($lhs:expr, $rhs:expr) => {
         ($lhs - $rhs).abs() < 1.0E-7
-    }
+    };
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub enum ControlEvent {
     Unsupported,
     NoteOn {

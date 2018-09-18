@@ -1,5 +1,5 @@
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 pub trait Wrap<T> {
     fn wrap(t: T) -> Self;
@@ -18,7 +18,6 @@ pub use std::ops;
 pub type Time = f32;
 /// A type alias for internal floating point precision.
 pub type Float = f64;
-
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /// A tuple struct that represents a single stereo frame.

@@ -1,6 +1,6 @@
-use types::Stereo;
-use dsp::{SignalLink, ControllableLink};
+use dsp::{ControllableLink, SignalLink};
 use event::ControlEvent;
+use types::Stereo;
 
 pub struct HardLimiter {}
 impl SignalLink for HardLimiter {

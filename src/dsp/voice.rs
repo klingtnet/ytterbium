@@ -1,15 +1,15 @@
 extern crate itertools;
 
-use std::collections::{VecDeque, HashMap};
 use self::itertools::Zip;
+use std::collections::{HashMap, VecDeque};
 
-use std::rc::Rc;
-use types::*;
 use dsp;
 use dsp::env_gen::*;
 use dsp::wavetable::*;
-use io::PitchConvert;
 use event::{ControlEvent, Controllable};
+use io::PitchConvert;
+use std::rc::Rc;
+use types::*;
 
 use dsp::SignalSource;
 
@@ -23,23 +23,22 @@ pub struct Voice {
     oscillators: Vec<WavetableOsc>,
 }
 impl Voice {
-    fn new(sample_rate: usize,
-           wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
-           pitch_convert_handle: Rc<PitchConvert>)
-           -> Self {
+    fn new(
+        sample_rate: usize,
+        wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
+        pitch_convert_handle: Rc<PitchConvert>,
+    ) -> Self {
         let mut levels = Vec::with_capacity(OSC_CNT);
         let mut oscillators = Vec::with_capacity(OSC_CNT);
         let mut volume_envelopes = Vec::with_capacity(OSC_CNT);
         for idx in 0..OSC_CNT {
-            levels.push(if idx == 0 {
-                MINUS_THREE_DB
-            } else {
-                0.0
-            });
-            oscillators.push(WavetableOsc::with_id(format!("OSC{}", idx + 1),
-                                                   sample_rate,
-                                                   wavetables.clone(),
-                                                   pitch_convert_handle.clone()));
+            levels.push(if idx == 0 { MINUS_THREE_DB } else { 0.0 });
+            oscillators.push(WavetableOsc::with_id(
+                format!("OSC{}", idx + 1),
+                sample_rate,
+                wavetables.clone(),
+                pitch_convert_handle.clone(),
+            ));
             volume_envelopes.push(ADSR::with_id(sample_rate, format!("ADSR-OSC{}", idx + 1)));
         }
         Voice {
@@ -52,20 +51,23 @@ impl Voice {
         }
     }
     fn running(&self) -> bool {
-        self.volume_envelopes.iter().all(|envelope| envelope.state() != ADSRState::Off)
+        self.volume_envelopes
+            .iter()
+            .all(|envelope| envelope.state() != ADSRState::Off)
     }
     fn tick(&mut self) -> Stereo {
         let mut samples = [0.0; OSC_CNT];
         let mut frame = Stereo::default();
         // tick each oscillator + apply env
-        for (idx, (sample, oscillator, envelope, level, pan)) in
-            Zip::new((&mut samples,
-                      &mut self.oscillators,
-                      &mut self.volume_envelopes,
-                      &self.levels,
-                      &self.pan))
-            .take(OSC_CNT)
-            .enumerate() {
+        for (idx, (sample, oscillator, envelope, level, pan)) in Zip::new((
+            &mut samples,
+            &mut self.oscillators,
+            &mut self.volume_envelopes,
+            &self.levels,
+            &self.pan,
+        )).take(OSC_CNT)
+        .enumerate()
+        {
             *sample = oscillator.tick() * envelope.tick();
             frame += Stereo(*sample, *sample) * *level * *pan;
         }
@@ -115,12 +117,14 @@ impl Controllable for Voice {
                     "OSC4" => 3,
                     _ => self.fm_mod.len(), // offset is larger than the length of the vector -> no modification
                 } * OSC_CNT;
-                for (idx, (old_level, new_level)) in self.fm_mod
+                for (idx, (old_level, new_level)) in self
+                    .fm_mod
                     .iter_mut()
                     .skip(offset)
                     .take(OSC_CNT)
                     .zip(levels.iter())
-                    .enumerate() {
+                    .enumerate()
+                {
                     *old_level = if idx == offset {
                         *new_level * 0.1 // feedback modulation easily creates feedback
                     } else {
@@ -150,7 +154,11 @@ impl VoiceManager {
         let pitch_convert = Rc::new(PitchConvert::default());
         let mut voices = Vec::with_capacity(max_voices);
         for _ in 0..max_voices {
-            voices.push(Voice::new(sample_rate, wavetables.clone(), pitch_convert.clone()));
+            voices.push(Voice::new(
+                sample_rate,
+                wavetables.clone(),
+                pitch_convert.clone(),
+            ));
         }
         VoiceManager {
             voices: voices,

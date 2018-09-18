@@ -1,5 +1,5 @@
-extern crate rosc;
 extern crate portmidi;
+extern crate rosc;
 
 #[derive(Debug)]
 pub enum RunError {

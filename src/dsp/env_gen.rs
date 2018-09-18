@@ -1,9 +1,9 @@
 use std::default::Default;
 
-use types::*;
 use event::{ControlEvent, Controllable};
+use types::*;
 
-#[derive(PartialEq,Debug,Copy,Clone)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub enum ADSRState {
     Attack,
     Decay,
@@ -111,7 +111,13 @@ impl Controllable for ADSR {
                 self.velocity = Float::from_db((1.0 - velocity) * -30.0);
             }
             ControlEvent::NoteOff { .. } => self.state_change(ADSRState::Release),
-            ControlEvent::ADSR { ref id, attack, decay, sustain, release } => {
+            ControlEvent::ADSR {
+                ref id,
+                attack,
+                decay,
+                sustain,
+                release,
+            } => {
                 // check path
                 // TODO: make sure that all values are non-zero!
                 if *id == self.id {

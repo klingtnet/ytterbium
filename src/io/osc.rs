@@ -1,21 +1,21 @@
 extern crate rosc;
 
-use rosc::{OscPacket, OscMessage, OscType};
+use rosc::{OscMessage, OscPacket, OscType};
 
 use errors::RunError;
-use std::net::{UdpSocket, SocketAddr};
+use std::net::{SocketAddr, UdpSocket};
 use std::sync::mpsc;
 
 use io::Receiver;
 
+use dsp::{FilterType, Waveform};
 use event::ControlEvent;
-use dsp::{Waveform, FilterType};
 use types::*;
 
 macro_rules! exp_scale {
     ($val:expr) => {
-        ((($val as Float) * ::std::f64::consts::LN_10).exp() - 1.0)/10.0
-    }
+        ((($val as Float) * ::std::f64::consts::LN_10).exp() - 1.0) / 10.0
+    };
 }
 
 const TRANSPOSE_RANGE: usize = 6; // Octaves
@@ -40,16 +40,22 @@ impl OscReceiver {
 }
 impl OscReceiver {
     fn receive(&mut self) -> Result<OscPacket, RunError> {
-        let (size, _) = try!(self.socket
-            .recv_from(&mut self.buf)
-            .map_err(RunError::IoError));
+        let (size, _) = try!(
+            self.socket
+                .recv_from(&mut self.buf)
+                .map_err(RunError::IoError)
+        );
         rosc::decoder::decode(&self.buf[..size]).map_err(RunError::OscError)
     }
 
     fn as_control_event(&mut self, packet: OscPacket) -> Vec<ControlEvent> {
         let mut events = Vec::new();
         for msg in Self::unwrap_packet(packet) {
-            let parts = msg.addr.split('/').filter(|s| !s.is_empty()).collect::<Vec<&str>>();
+            let parts = msg
+                .addr
+                .split('/')
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<&str>>();
             if parts.is_empty() {
                 continue;
             }
@@ -114,118 +120,113 @@ impl OscReceiver {
         }
     }
 
-    fn handle_oscillators(&mut self,
-                          msg: &OscMessage,
-                          address: &[&str],
-                          events: &mut Vec<ControlEvent>) {
+    fn handle_oscillators(
+        &mut self,
+        msg: &OscMessage,
+        address: &[&str],
+        events: &mut Vec<ControlEvent>,
+    ) {
         if address.len() < 3 {
             return;
         }
         // TODO: refactor this mess
         match address[0] {
-            "FILTER" => {
-                match (address[1], address[2]) {
-                    ("FILTERTYPE", "selection") => {
+            "FILTER" => match (address[1], address[2]) {
+                ("FILTERTYPE", "selection") => {
+                    let args = msg.args.as_ref().unwrap();
+                    if let OscType::Float(selection) = args[0] {
+                        let filter_type = match selection as usize {
+                            0 => Some(FilterType::LP),
+                            1 => Some(FilterType::HP),
+                            2 => Some(FilterType::BP),
+                            3 => Some(FilterType::Notch),
+                            _ => None,
+                        };
+                        events.push(ControlEvent::Filter {
+                            filter_type: filter_type,
+                            freq: None,
+                            q: None,
+                        })
+                    }
+                }
+                ("FREQRES", _) => match address[2] {
+                    "x" => {
                         let args = msg.args.as_ref().unwrap();
-                        if let OscType::Float(selection) = args[0] {
-                            let filter_type = match selection as usize {
-                                0 => Some(FilterType::LP),
-                                1 => Some(FilterType::HP),
-                                2 => Some(FilterType::BP),
-                                3 => Some(FilterType::Notch),
-                                _ => None,
-                            };
+                        if let OscType::Float(freq) = args[0] {
                             events.push(ControlEvent::Filter {
-                                filter_type: filter_type,
-                                freq: None,
+                                filter_type: None,
+                                freq: Some(40. + 20_000.0 * freq as Float),
                                 q: None,
-                            })
+                            });
                         }
                     }
-                    ("FREQRES", _) => {
-                        match address[2] {
-                            "x" => {
-                                let args = msg.args.as_ref().unwrap();
-                                if let OscType::Float(freq) = args[0] {
-                                    events.push(ControlEvent::Filter {
-                                        filter_type: None,
-                                        freq: Some(40. + 20_000.0 * freq as Float),
-                                        q: None,
-                                    });
-                                }
-                            }
-                            "y" => {
-                                let args = msg.args.as_ref().unwrap();
-                                if let OscType::Float(q) = args[0] {
-                                    events.push(ControlEvent::Filter {
-                                        filter_type: None,
-                                        freq: None,
-                                        q: Some(4. * q as Float),
-                                    });
-                                }
-                            }
-                            _ => {}
+                    "y" => {
+                        let args = msg.args.as_ref().unwrap();
+                        if let OscType::Float(q) = args[0] {
+                            events.push(ControlEvent::Filter {
+                                filter_type: None,
+                                freq: None,
+                                q: Some(4. * q as Float),
+                            });
                         }
                     }
                     _ => {}
+                },
+                _ => {}
+            },
+            "MIX" => match (address[1], address[2]) {
+                ("PAN", "x") => {
+                    let args = msg
+                        .args
+                        .as_ref()
+                        .unwrap()
+                        .iter()
+                        .map(|arg| match *arg {
+                            OscType::Float(val) => val as Float,
+                            _ => 0.0,
+                        }).collect::<Vec<_>>();
+                    events.push(ControlEvent::Pan(args));
                 }
-            }
-            "MIX" => {
-                match (address[1], address[2]) {
-                    ("PAN", "x") => {
-                        let args = msg.args
+
+                ("VOLUME", "x") => {
+                    let args = msg
+                        .args
+                        .as_ref()
+                        .unwrap()
+                        .iter()
+                        .map(|arg| match *arg {
+                            OscType::Float(val) => (1.0 - val as Float) * -61.0,
+                            _ => 0.0,
+                        }).collect::<Vec<_>>();
+                    events.push(ControlEvent::Volume(args));
+                }
+                _ => {}
+            },
+            "FM" => match address[1] {
+                "OSC1" | "OSC2" | "OSC3" | "OSC4" => {
+                    if let ("LEVEL", "x") = (address[2], address[3]) {
+                        let args = msg
+                            .args
                             .as_ref()
                             .unwrap()
                             .iter()
                             .map(|arg| match *arg {
                                 OscType::Float(val) => val as Float,
                                 _ => 0.0,
-                            })
-                            .collect::<Vec<_>>();
-                        events.push(ControlEvent::Pan(args));
+                            }).collect::<Vec<Float>>();
+                        events.push(ControlEvent::FM {
+                            id: address[1].to_owned(),
+                            levels: args,
+                        });
                     }
-
-                    ("VOLUME", "x") => {
-                        let args = msg.args
-                            .as_ref()
-                            .unwrap()
-                            .iter()
-                            .map(|arg| match *arg {
-                                OscType::Float(val) => (1.0 - val as Float) * -61.0,
-                                _ => 0.0,
-                            })
-                            .collect::<Vec<_>>();
-                        events.push(ControlEvent::Volume(args));
-                    }
-                    _ => {}
                 }
-            }
-            "FM" => {
-                match address[1] {
-                    "OSC1" | "OSC2" | "OSC3" | "OSC4" => {
-                        if let ("LEVEL", "x") = (address[2], address[3]) {
-                            let args = msg.args
-                                .as_ref()
-                                .unwrap()
-                                .iter()
-                                .map(|arg| match *arg {
-                                    OscType::Float(val) => val as Float,
-                                    _ => 0.0,
-                                })
-                                .collect::<Vec<Float>>();
-                            events.push(ControlEvent::FM {
-                                id: address[1].to_owned(),
-                                levels: args,
-                            });
-                        }
-                    }
-                    _ => {}
-                }
-            }
+                _ => {}
+            },
             _ => {
                 match (address[1], address[2]) {
                     ("ADSR", "x") => {
-                        let args = msg.args
+                        let args = msg
+                            .args
                             .as_ref()
                             .unwrap()
                             .iter()
@@ -235,8 +236,7 @@ impl OscReceiver {
                                     OscType::Float(val) => exp_scale!(val),
                                     _ => 1.0E-4,
                                 }
-                            })
-                            .collect::<Vec<Float>>();
+                            }).collect::<Vec<Float>>();
                         let id_prefix: String = "ADSR-".to_owned();
                         events.push(ControlEvent::ADSR {
                             id: id_prefix + address[0],

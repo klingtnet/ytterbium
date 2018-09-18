@@ -1,8 +1,8 @@
-use types::{Float, Stereo, PI};
 use dsp::ControllableLink;
 use event::ControlEvent;
+use types::{Float, Stereo, PI};
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum FilterType {
     LP,
     HP,
@@ -108,7 +108,11 @@ impl ControllableLink for Filter {
     }
     fn handle(&mut self, msg: &ControlEvent) {
         match *msg {
-            ControlEvent::Filter { filter_type, freq, q } => {
+            ControlEvent::Filter {
+                filter_type,
+                freq,
+                q,
+            } => {
                 if let Some(some_type) = filter_type {
                     self.set_filter_type(some_type)
                 }
@@ -118,7 +122,6 @@ impl ControllableLink for Filter {
                 if let Some(some_q) = q {
                     self.set_q(some_q)
                 }
-
             }
             _ => {}
         }
@@ -130,10 +133,10 @@ mod tests {
     extern crate hound;
     extern crate rand;
 
-    use super::{Filter, FilterType};
-    use super::super::ControllableLink;
-    use types::{Float, Stereo, MINUS_THREE_DB};
     use self::rand::distributions::{IndependentSample, Range};
+    use super::super::ControllableLink;
+    use super::{Filter, FilterType};
+    use types::{Float, Stereo, MINUS_THREE_DB};
 
     #[test]
     fn test_filter() {
@@ -147,10 +150,17 @@ mod tests {
             bits_per_sample: 32,
         };
         let scale = ::std::i32::MAX as Float;
-        for filter_type in &[FilterType::LP, FilterType::HP, FilterType::BP, FilterType::Notch] {
-            let filename = format!("ytterbium-{}-{:?}-filter.wav",
-                                   env!("CARGO_PKG_VERSION"),
-                                   filter_type);
+        for filter_type in &[
+            FilterType::LP,
+            FilterType::HP,
+            FilterType::BP,
+            FilterType::Notch,
+        ] {
+            let filename = format!(
+                "ytterbium-{}-{:?}-filter.wav",
+                env!("CARGO_PKG_VERSION"),
+                filter_type
+            );
             let mut writer = hound::WavWriter::create(filename, wave_spec).unwrap();
 
             const MINUS_SIX_DB: Float = MINUS_THREE_DB * MINUS_THREE_DB;
@@ -168,8 +178,8 @@ mod tests {
             filter.set_q(q);
             filter.set_filter_type(*filter_type);
 
-            let multiplier = 1.0 +
-                             ((end_freq as Float).ln() - (start_freq).ln()) / num_samples as Float;
+            let multiplier =
+                1.0 + ((end_freq as Float).ln() - (start_freq).ln()) / num_samples as Float;
 
             for idx in 0..num_samples {
                 let r = range.ind_sample(&mut rng);

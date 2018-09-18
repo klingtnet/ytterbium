@@ -1,22 +1,22 @@
-extern crate rustfft;
+extern crate bincode;
 extern crate num;
 extern crate rand;
-extern crate bincode;
+extern crate rustfft;
 
+use self::bincode::rustc_serialize::{decode_from, encode_into};
+use self::bincode::SizeLimit;
 use self::rustfft::algorithm::Radix4;
 use self::rustfft::num_complex::Complex;
 use self::rustfft::num_traits::Zero;
 use self::rustfft::FFT;
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-use self::bincode::rustc_serialize::{decode_from, encode_into};
-use self::bincode::SizeLimit;
+use std::rc::Rc;
 
-use types::*;
-use io::PitchConvert;
 use event::{ControlEvent, Controllable};
+use io::PitchConvert;
+use types::*;
 
 const OVERSAMPLING: usize = 2;
 const INVERSE: bool = true;
@@ -39,19 +39,18 @@ impl Wavetable {
     /// The phase is mapped to a table index.
     fn sample(&self, phasor: Float) -> Float {
         let table_len = self.table.len();
-        let idx = if phasor < 0.0 {
-            phasor + 1.0
-        } else {
-            phasor
-        } * table_len as Float;
+        let idx = if phasor < 0.0 { phasor + 1.0 } else { phasor } * table_len as Float;
         // linear interpolation
-        let (i, j) = (idx.floor() as usize % table_len, idx.ceil() as usize % table_len);
+        let (i, j) = (
+            idx.floor() as usize % table_len,
+            idx.ceil() as usize % table_len,
+        );
         self.table[i] + (self.table[j] - self.table[i]) * (idx - i as Float)
     }
 }
 
 /// Implemented waveforms.
-#[derive(PartialEq,Eq,Hash,Debug,Copy,Clone)]
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
 pub enum Waveform {
     Sine,
     Saw,
@@ -65,7 +64,9 @@ pub enum Waveform {
 macro_rules! scale {
     ($flag:expr, $signal:expr) => {
         if $flag {
-            let scale = $signal.iter().fold(0.0, |acc: Float, val| acc.max(val.re.abs()));
+            let scale = $signal
+                .iter()
+                .fold(0.0, |acc: Float, val| acc.max(val.re.abs()));
             for sample in &mut $signal {
                 sample.re *= scale.recip();
             }
@@ -74,19 +75,24 @@ macro_rules! scale {
 }
 
 /// Builds wavetables for each waveform and returns a `HashMap` containing them.
-pub fn generate_wavetables(fundamental_freq: Float,
-                           sample_rate: usize)
-                           -> HashMap<Waveform, Vec<Wavetable>> {
+pub fn generate_wavetables(
+    fundamental_freq: Float,
+    sample_rate: usize,
+) -> HashMap<Waveform, Vec<Wavetable>> {
     let mut tables: HashMap<Waveform, Vec<Wavetable>> = HashMap::new();
-    for waveform in &[Waveform::Saw,
-                      Waveform::Sine,
-                      Waveform::Square,
-                      Waveform::Tri,
-                      Waveform::SharpTri,
-                      Waveform::Random] {
-        let filename = format!("ytterbium-{}-wavetable-{:?}.bin",
-                               env!("CARGO_PKG_VERSION"),
-                               waveform);
+    for waveform in &[
+        Waveform::Saw,
+        Waveform::Sine,
+        Waveform::Square,
+        Waveform::Tri,
+        Waveform::SharpTri,
+        Waveform::Random,
+    ] {
+        let filename = format!(
+            "ytterbium-{}-wavetable-{:?}.bin",
+            env!("CARGO_PKG_VERSION"),
+            waveform
+        );
         let band_limited_table = {
             if let Ok(file) = File::open(&filename) {
                 let mut reader = BufReader::new(file);
@@ -94,8 +100,10 @@ pub fn generate_wavetables(fundamental_freq: Float,
                     .expect(&format!("could not decode wavetable: {}", filename))
             } else {
                 let band_limited_table = build_wavetables(*waveform, fundamental_freq, sample_rate);
-                let file = File::create(&filename)
-                    .expect(&format!("could not create file for wavetable: {}", filename));
+                let file = File::create(&filename).expect(&format!(
+                    "could not create file for wavetable: {}",
+                    filename
+                ));
                 let mut writer = BufWriter::new(file);
                 encode_into(&band_limited_table, &mut writer, SizeLimit::Infinite)
                     .expect(&format!("could not encode wavetable: {}", filename));
@@ -109,10 +117,11 @@ pub fn generate_wavetables(fundamental_freq: Float,
 
 /// Builds the band-limited wavetables for the given waveform, fundamental frequency and
 /// sample rate.
-fn build_wavetables(waveform: Waveform,
-                    fundamental_freq: Float,
-                    sample_rate: usize)
-                    -> Vec<Wavetable> {
+fn build_wavetables(
+    waveform: Waveform,
+    fundamental_freq: Float,
+    sample_rate: usize,
+) -> Vec<Wavetable> {
     let min_table_size = 64;
     let mut phase_incr = fundamental_freq * 2.0 / sample_rate as Float;
     let (mut harmonics, mut table_size) = match waveform {
@@ -154,10 +163,7 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
     let table_size = spectrum.len();
     if harmonics == 1 {
         // use a pure sine
-        spectrum[1] = Complex {
-            re: 1.0,
-            im: -1.0,
-        };
+        spectrum[1] = Complex { re: 1.0, im: -1.0 };
         spectrum[table_size - 1] = -spectrum[1];
         return;
     }
@@ -184,11 +190,7 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
         }
         Waveform::Tri => {
             for i in (1..harmonics).filter(|i| i % 2 == 1) {
-                let sign = if i % 4 == 1 {
-                    1.0
-                } else {
-                    -1.0
-                };
+                let sign = if i % 4 == 1 { 1.0 } else { -1.0 };
                 let magnitude = ((i * i) as Float).recip();
                 spectrum[i] = Complex {
                     re: 1.0,
@@ -199,11 +201,7 @@ fn generate_spectrum(waveform: Waveform, harmonics: usize, spectrum: &mut Vec<Co
         }
         Waveform::SharpTri => {
             for i in (1..harmonics).filter(|i| i % 2 == 1) {
-                let sign = if i % 4 == 1 {
-                    1.0
-                } else {
-                    -1.0
-                };
+                let sign = if i % 4 == 1 { 1.0 } else { -1.0 };
                 let magnitude = (i as Float).recip();
                 spectrum[i] = Complex {
                     re: 1.0,
@@ -244,10 +242,11 @@ pub struct WavetableOsc {
 }
 impl WavetableOsc {
     /// Constructs a wavetable oscillator for the given sample rate.
-    pub fn new(sample_rate: usize,
-               wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
-               pitch_convert: Rc<PitchConvert>)
-               -> Self {
+    pub fn new(
+        sample_rate: usize,
+        wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
+        pitch_convert: Rc<PitchConvert>,
+    ) -> Self {
         WavetableOsc {
             phase_incr: 0.0,
             sample_rate: sample_rate,
@@ -265,11 +264,12 @@ impl WavetableOsc {
         }
     }
 
-    pub fn with_id<S: Into<String>>(id: S,
-                                    sample_rate: usize,
-                                    wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
-                                    pitch_convert: Rc<PitchConvert>)
-                                    -> Self {
+    pub fn with_id<S: Into<String>>(
+        id: S,
+        sample_rate: usize,
+        wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
+        pitch_convert: Rc<PitchConvert>,
+    ) -> Self {
         let mut osc = WavetableOsc::new(sample_rate, wavetables, pitch_convert);
         osc.set_id(id);
         osc
@@ -358,9 +358,11 @@ impl Controllable for WavetableOsc {
             }
             ControlEvent::Detune { ref id, detune } => {
                 if *id == self.id {
-                    let (low, current, high) = (self.pitch_convert.key_to_hz(self.key - 1),
-                                                self.pitch_convert.key_to_hz(self.key),
-                                                self.pitch_convert.key_to_hz(self.key + 1));
+                    let (low, current, high) = (
+                        self.pitch_convert.key_to_hz(self.key - 1),
+                        self.pitch_convert.key_to_hz(self.key),
+                        self.pitch_convert.key_to_hz(self.key + 1),
+                    );
                     // linear approximation of cents
                     let cent = if detune < 0 {
                         (low - current)
@@ -392,15 +394,19 @@ fn test_wavetable_sweep() {
         sample_rate: SAMPLE_RATE as u32,
         bits_per_sample: 32,
     };
-    for waveform in &[Waveform::Sine,
-                      Waveform::Saw,
-                      Waveform::Square,
-                      Waveform::Tri,
-                      Waveform::SharpTri,
-                      Waveform::Random] {
-        let filename = format!("ytterbium-{}-{:?}-sweep.wav",
-                               env!("CARGO_PKG_VERSION"),
-                               waveform);
+    for waveform in &[
+        Waveform::Sine,
+        Waveform::Saw,
+        Waveform::Square,
+        Waveform::Tri,
+        Waveform::SharpTri,
+        Waveform::Random,
+    ] {
+        let filename = format!(
+            "ytterbium-{}-{:?}-sweep.wav",
+            env!("CARGO_PKG_VERSION"),
+            waveform
+        );
         // An existing file will be overwritten.
         osc.reset();
         let mut writer = hound::WavWriter::create(filename, wave_spec).unwrap();
