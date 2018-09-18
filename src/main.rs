@@ -33,7 +33,7 @@ use event::Controllable;
 use io::{MidiReceiver, OscReceiver, Receiver};
 use types::*;
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 const BUF_SIZE: usize = 2048;
 const MAX_VOICES: usize = 16;
 
