@@ -1,8 +1,8 @@
 mod midi;
 mod osc;
 
-use std::sync::mpsc;
 use event::ControlEvent;
+use std::sync::mpsc;
 
 pub use self::midi::*;
 pub use self::osc::*;
@@ -27,8 +27,7 @@ impl PitchConvert {
                     let dist_concert_a = key as isize - 69;
                     let two: Float = 2.0;
                     two.powf(dist_concert_a as Float / 12.0) * tune_freq
-                })
-                .collect::<Vec<_>>(),
+                }).collect::<Vec<_>>(),
         }
     }
 

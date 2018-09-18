@@ -1,6 +1,6 @@
-use types::Stereo;
-use dsp::{SignalLink, ControllableLink};
+use dsp::{ControllableLink, SignalLink};
 use event::ControlEvent;
+use types::Stereo;
 
 pub struct HardLimiter {}
 impl SignalLink for HardLimiter {
@@ -28,5 +28,5 @@ impl ControllableLink for SoftLimiter {
             _ => Stereo(input.0.signum(), input.1.signum()),
         }
     }
-    fn handle(&mut self, msg: &ControlEvent) {}
+    fn handle(&mut self, _msg: &ControlEvent) {}
 }
