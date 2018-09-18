@@ -50,8 +50,7 @@ impl ADSR {
     }
 
     pub fn tick(&mut self) -> Float {
-        let tmp = self.velocity *
-                  match self.state {
+        self.velocity * match self.state {
             ADSRState::Off => 0.0,
             ADSRState::Sustain => self.level,
             _ => {
