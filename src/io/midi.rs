@@ -96,7 +96,7 @@ impl From<portmidi::MidiEvent> for MidiEvent {
                 msg_type: ((data1 & 0xF0) >> 4) as u8,
                 value: (data1 & 0x0F) as u8,
             },
-            0xF2 => MidiEvent::SongPosition(data1 as u16 + ((data2 as u16) << 8)),
+            0xF2 => MidiEvent::SongPosition(u16::from(data1) + (u16::from(data2) << 8)),
             0xF3 => MidiEvent::SongSelect(data1 as u8),
             0xF6 => MidiEvent::TuneRequest,
             0xF7 => MidiEvent::SysExEnd,
@@ -113,24 +113,24 @@ impl From<portmidi::MidiEvent> for MidiEvent {
                 match status & 0xF0 {
                     0x80 => MidiEvent::NoteOff {
                         key: data1 as u8,
-                        velocity: data2 as Float / 127.0,
+                        velocity: Float::from(data2) / 127.0,
                         channel,
                     },
                     0x90 => MidiEvent::NoteOn {
                         key: data1 as u8,
-                        velocity: data2 as Float / 127.0,
+                        velocity: Float::from(data2) / 127.0,
                         channel,
                     },
                     0xA0 => MidiEvent::PolyphonicKeyPressure {
                         key: data1 as u8,
-                        velocity: data2 as Float / 127.0,
+                        velocity: Float::from(data2) / 127.0,
                         channel,
                     },
                     0xB0 => match data1 {
                         120...127 => MidiEvent::Unsupported,
                         _ => MidiEvent::ControlChange {
                             controller: data1 as u8,
-                            value: data2 as Float / 127.0,
+                            value: Float::from(data2) / 127.0,
                             channel,
                         },
                     },
@@ -143,7 +143,7 @@ impl From<portmidi::MidiEvent> for MidiEvent {
                         channel,
                     },
                     0xE0 => MidiEvent::PitchBend {
-                        pitchbend: data1 as u16 + ((data2 as u16) << 8),
+                        pitchbend: u16::from(data1) + (u16::from(data2) << 8),
                         channel,
                     },
                     _ => MidiEvent::Unknown,

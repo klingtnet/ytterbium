@@ -369,7 +369,7 @@ impl Controllable for WavetableOsc {
                     } else {
                         (high - current)
                     } / 100.0;
-                    self.detune_hz = (detune as Float) * cent;
+                    self.detune_hz = Float::from(detune) * cent;
                     let detuned_freq = current + self.detune_hz;
                     self.set_freq(detuned_freq);
                 }

@@ -230,7 +230,7 @@ fn run(args: Args) -> Result<(), RunError> {
                         println!("Underflow in {} occured!", out.name().unwrap())
                     });
                     out_stream.open().unwrap();
-                    out_stream.set_latency(4096.0 / sample_rate as Float);
+                    out_stream.set_latency(4096.0 / Float::from(sample_rate));
                     match out_stream.latency() {
                         Ok(latency) => println!("SW-latency: {:.2} ms", 1000.0 * latency),
                         Err(err) => println!("err: {}", err),

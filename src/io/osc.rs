@@ -14,7 +14,7 @@ use types::*;
 
 macro_rules! exp_scale {
     ($val:expr) => {
-        ((($val as Float) * ::std::f64::consts::LN_10).exp() - 1.0) / 10.0
+        (((Float::from($val)) * ::std::f64::consts::LN_10).exp() - 1.0) / 10.0
     };
 }
 
@@ -96,12 +96,12 @@ impl OscReceiver {
                         if velocity > old_velocity {
                             events.push(ControlEvent::NoteOn {
                                 key: transposed_key,
-                                velocity: velocity as Float,
+                                velocity: Float::from(velocity),
                             });
                         } else {
                             events.push(ControlEvent::NoteOff {
                                 key: transposed_key,
-                                velocity: velocity as Float,
+                                velocity: Float::from(velocity),
                             });
                         }
                     }
@@ -155,7 +155,7 @@ impl OscReceiver {
                         if let OscType::Float(freq) = args[0] {
                             events.push(ControlEvent::Filter {
                                 filter_type: None,
-                                freq: Some(40. + 20_000.0 * freq as Float),
+                                freq: Some(40. + 20_000.0 * Float::from(freq)),
                                 q: None,
                             });
                         }
@@ -166,7 +166,7 @@ impl OscReceiver {
                             events.push(ControlEvent::Filter {
                                 filter_type: None,
                                 freq: None,
-                                q: Some(4. * q as Float),
+                                q: Some(4. * Float::from(q)),
                             });
                         }
                     }
@@ -195,7 +195,7 @@ impl OscReceiver {
                         .unwrap()
                         .iter()
                         .map(|arg| match *arg {
-                            OscType::Float(val) => (1.0 - val as Float) * -61.0,
+                            OscType::Float(val) => (1.0 - Float::from(val)) * -61.0,
                             _ => 0.0,
                         }).collect::<Vec<_>>();
                     events.push(ControlEvent::Volume(args));
@@ -211,7 +211,7 @@ impl OscReceiver {
                             .unwrap()
                             .iter()
                             .map(|arg| match *arg {
-                                OscType::Float(val) => val as Float,
+                                OscType::Float(val) => Float::from(val),
                                 _ => 0.0,
                             }).collect::<Vec<Float>>();
                         events.push(ControlEvent::FM {
@@ -251,7 +251,7 @@ impl OscReceiver {
                         if let OscType::Float(phase) = args[0] {
                             events.push(ControlEvent::Phase {
                                 id: address[0].to_owned(),
-                                phase: phase as Float,
+                                phase: Float::from(phase),
                             });
                         }
                     }
