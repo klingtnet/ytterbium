@@ -3,12 +3,14 @@ extern crate num;
 extern crate rand;
 extern crate bincode;
 
+use self::rustfft::algorithm::Radix4;
+use self::rustfft::num_complex::Complex;
+use self::rustfft::num_traits::Zero;
+use self::rustfft::FFT;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-use self::num::{Complex, Zero};
-use self::rustfft::FFT;
 use self::bincode::rustc_serialize::{decode_from, encode_into};
 use self::bincode::SizeLimit;
 
@@ -125,13 +127,13 @@ fn build_wavetables(waveform: Waveform,
     // use sine if only 1 harmonic is left, otherwise the last table for waveforms with
     // only odd harmonics would be empty!
     while harmonics > 0 {
-        let mut fft = FFT::new(table_size, INVERSE);
+        let mut fft = Radix4::new(table_size, INVERSE);
         let mut spectrum = vec![num::Complex::zero(); table_size];
         let mut signal = spectrum.clone();
 
         generate_spectrum(waveform, harmonics, &mut spectrum);
 
-        fft.process(&spectrum, &mut signal);
+        fft.process(spectrum.as_mut_slice(), signal.as_mut_slice());
         scale!(SCALE, signal);
 
         tables.push(Wavetable {
