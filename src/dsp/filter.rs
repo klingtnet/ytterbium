@@ -18,7 +18,7 @@ pub struct Filter {
     w: Float,
     a: Float,
     coeffs: ([Float; 2], [Float; 3]),
-    Xs: [Stereo; 2],
+    x_s: [Stereo; 2],
 }
 impl Filter {
     pub fn new(sample_rate: usize) -> Self {
@@ -26,7 +26,7 @@ impl Filter {
         let w = 2.0 * PI * fc / sample_rate as Float;
         let q = 1.0;
         let filter_type = FilterType::LP;
-        let (As, Bs) = Filter::coeffs(w, q, filter_type);
+        let (a_s, b_s) = Filter::coeffs(w, q, filter_type);
         Filter {
             sample_rate,
             filter_type,
@@ -34,47 +34,47 @@ impl Filter {
             q,
             w,
             a: 1.0, // unity gain
-            coeffs: (As, Bs),
-            Xs: [Stereo::default(); 2],
+            coeffs: (a_s, b_s),
+            x_s: [Stereo::default(); 2],
         }
     }
 
     fn coeffs(w: Float, q: Float, filter_type: FilterType) -> ([Float; 2], [Float; 3]) {
         let (sinw, cosw) = (Float::sin(w), Float::cos(w));
-        let (mut As, mut Bs) = ([0.; 2], [0.; 3]);
+        let (mut a_s, mut b_s) = ([0.; 2], [0.; 3]);
         let alpha = sinw / (2.0 * q);
 
         let a0 = 1. + alpha;
-        As[0] = -2. * cosw;
-        As[1] = 1. - alpha;
+        a_s[0] = -2. * cosw;
+        a_s[1] = 1. - alpha;
         // only zeros differ
         match filter_type {
             FilterType::LP => {
-                Bs[0] = (1. - cosw) / 2.;
-                Bs[1] = 1. - cosw;
-                Bs[2] = (1. - cosw) / 2.;
+                b_s[0] = (1. - cosw) / 2.;
+                b_s[1] = 1. - cosw;
+                b_s[2] = (1. - cosw) / 2.;
             }
             FilterType::HP => {
-                Bs[0] = (1. + cosw) / 2.;
-                Bs[1] = -1. - cosw;
-                Bs[2] = (1. + cosw) / 2.;
+                b_s[0] = (1. + cosw) / 2.;
+                b_s[1] = -1. - cosw;
+                b_s[2] = (1. + cosw) / 2.;
             }
             FilterType::BP => {
-                Bs[0] = alpha;
-                Bs[1] = 0.;
-                Bs[2] = -alpha;
+                b_s[0] = alpha;
+                b_s[1] = 0.;
+                b_s[2] = -alpha;
             }
             FilterType::Notch => {
-                Bs[0] = 1.;
-                Bs[1] = -2. * cosw;
-                Bs[2] = 1.;
+                b_s[0] = 1.;
+                b_s[1] = -2. * cosw;
+                b_s[2] = 1.;
             }
         }
         // normalize by dividing through a0
-        for x in Bs.iter_mut().chain(As.iter_mut()) {
+        for x in b_s.iter_mut().chain(a_s.iter_mut()) {
             *x /= a0;
         }
-        (As, Bs)
+        (a_s, b_s)
     }
 
     fn set_freq(&mut self, freq: Float) {
@@ -99,11 +99,11 @@ impl Filter {
 
 impl ControllableLink for Filter {
     fn tick(&mut self, input: Stereo) -> Stereo {
-        let (As, Bs) = self.coeffs;
-        let fw = input - self.Xs[0] * As[0] - self.Xs[1] * As[1];
-        let out = fw * Bs[0] + self.Xs[0] * Bs[1] + self.Xs[1] * Bs[2];
-        self.Xs[1] = self.Xs[0];
-        self.Xs[0] = fw;
+        let (a_s, b_s) = self.coeffs;
+        let fw = input - self.x_s[0] * a_s[0] - self.x_s[1] * a_s[1];
+        let out = fw * b_s[0] + self.x_s[0] * b_s[1] + self.x_s[1] * b_s[2];
+        self.x_s[1] = self.x_s[0];
+        self.x_s[0] = fw;
         out
     }
     fn handle(&mut self, msg: &ControlEvent) {
