@@ -59,7 +59,7 @@ impl Voice {
         let mut samples = [0.0; OSC_CNT];
         let mut frame = Stereo::default();
         // tick each oscillator + apply env
-        for (idx, (sample, oscillator, envelope, level, pan)) in Zip::new((
+        for (_idx, (sample, oscillator, envelope, level, pan)) in Zip::new((
             &mut samples,
             &mut self.oscillators,
             &mut self.volume_envelopes,

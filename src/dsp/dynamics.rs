@@ -28,5 +28,5 @@ impl ControllableLink for SoftLimiter {
             _ => Stereo(input.0.signum(), input.1.signum()),
         }
     }
-    fn handle(&mut self, msg: &ControlEvent) {}
+    fn handle(&mut self, _msg: &ControlEvent) {}
 }
