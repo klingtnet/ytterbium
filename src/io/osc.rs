@@ -182,7 +182,7 @@ impl OscReceiver {
                         .unwrap()
                         .iter()
                         .map(|arg| match *arg {
-                            OscType::Float(val) => val as Float,
+                            OscType::Float(val) => Float::from(val),
                             _ => 0.0,
                         }).collect::<Vec<_>>();
                     events.push(ControlEvent::Pan(args));

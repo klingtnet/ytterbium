@@ -97,16 +97,15 @@ pub fn generate_wavetables(
             if let Ok(file) = File::open(&filename) {
                 let mut reader = BufReader::new(file);
                 decode_from(&mut reader, SizeLimit::Infinite)
-                    .expect(&format!("could not decode wavetable: {}", filename))
+                    .unwrap_or_else(|_| panic!("could not decode wavetable: {}", filename))
             } else {
                 let band_limited_table = build_wavetables(*waveform, fundamental_freq, sample_rate);
-                let file = File::create(&filename).expect(&format!(
-                    "could not create file for wavetable: {}",
-                    filename
-                ));
+                let file = File::create(&filename).unwrap_or_else(|_| {
+                    panic!("could not create file for wavetable: {}", filename)
+                });
                 let mut writer = BufWriter::new(file);
                 encode_into(&band_limited_table, &mut writer, SizeLimit::Infinite)
-                    .expect(&format!("could not encode wavetable: {}", filename));
+                    .unwrap_or_else(|_| panic!("could not encode wavetable: {}", filename));
                 band_limited_table
             }
         };

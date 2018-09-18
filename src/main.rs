@@ -46,7 +46,6 @@ macro_rules! printerr(
 
 struct Args {
     socket_addr_in: SocketAddr,
-    socket_addr_out: SocketAddr,
     sample_rate: usize,
 }
 
@@ -106,28 +105,24 @@ fn get_args() -> Args {
                 process::exit(1)
             }
         }).collect::<Vec<u16>>();
-    let (socket_addr_in, socket_addr_out) = (
-        SocketAddr::new(ip_addr, ports[0]),
-        SocketAddr::new(ip_addr, ports[1]),
-    );
+    let socket_addr_in = SocketAddr::new(ip_addr, ports[0]);
 
     Args {
         socket_addr_in,
-        socket_addr_out,
         sample_rate,
     }
 }
 
 fn main() {
     let args = get_args();
-    run(args)
+    run(&args)
         .map_err(|err| {
             printerr!("{:?}", err);
             process::exit(1)
         }).unwrap();
 }
 
-fn run(args: Args) -> Result<(), RunError> {
+fn run(args: &Args) -> Result<(), RunError> {
     let buf = rb::SpscRb::new(BUF_SIZE);
     let (producer, consumer) = (buf.producer(), buf.consumer());
     let (tx_receiver, rx_dsp) = mpsc::channel();

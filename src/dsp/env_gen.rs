@@ -12,8 +12,8 @@ pub enum ADSRState {
     Off,
 }
 impl ADSRState {
-    fn progress(&self) -> ADSRState {
-        match *self {
+    fn progress(self) -> ADSRState {
+        match self {
             ADSRState::Attack => ADSRState::Decay,
             ADSRState::Decay => ADSRState::Sustain,
             ADSRState::Sustain => ADSRState::Release,

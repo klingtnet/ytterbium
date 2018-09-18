@@ -25,8 +25,8 @@ pub struct Voice {
 impl Voice {
     fn new(
         sample_rate: usize,
-        wavetables: Rc<HashMap<Waveform, Vec<Wavetable>>>,
-        pitch_convert_handle: Rc<PitchConvert>,
+        wavetables: &Rc<HashMap<Waveform, Vec<Wavetable>>>,
+        pitch_convert_handle: &Rc<PitchConvert>,
     ) -> Self {
         let mut levels = Vec::with_capacity(OSC_CNT);
         let mut oscillators = Vec::with_capacity(OSC_CNT);
@@ -156,8 +156,8 @@ impl VoiceManager {
         for _ in 0..max_voices {
             voices.push(Voice::new(
                 sample_rate,
-                wavetables.clone(),
-                pitch_convert.clone(),
+                &wavetables,
+                &pitch_convert,
             ));
         }
         VoiceManager {

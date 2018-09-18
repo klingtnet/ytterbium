@@ -52,10 +52,10 @@ impl MidiReceiver {
         port.read_n(self.buf_len).map_err(RunError::MidiError)
     }
 
-    fn to_control_event(&self, event: MidiEvent) -> ControlEvent {
+    fn to_control_event(&self, event: &MidiEvent) -> ControlEvent {
         match event {
-            MidiEvent::NoteOn { key, velocity, .. } => ControlEvent::NoteOn { key, velocity },
-            MidiEvent::NoteOff { key, velocity, .. } => ControlEvent::NoteOff { key, velocity },
+            MidiEvent::NoteOn { key, velocity, .. } => ControlEvent::NoteOn { key: *key, velocity: *velocity },
+            MidiEvent::NoteOff { key, velocity, .. } => ControlEvent::NoteOff { key: *key, velocity: *velocity },
             _ => ControlEvent::Unsupported,
         }
     }
@@ -76,7 +76,7 @@ impl Receiver for MidiReceiver {
 
             // event_buf.sort_by_key(|e| e.timestamp);
             while let Some(event) = event_buf.pop() {
-                tx.send(self.to_control_event(MidiEvent::from(event)))
+                tx.send(self.to_control_event(&MidiEvent::from(event)))
                     .unwrap();
             }
 
