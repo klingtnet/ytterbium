@@ -100,9 +100,9 @@ impl Controllable for Voice {
                         // use a quadratic panning
                         let pan_squared = new_pan * new_pan;
                         let scale = if new_pan.signum() < 0.0 {
-                            Stereo((1.0 - MINUS_THREE_DB), MINUS_THREE_DB)
+                            Stereo(1.0 - MINUS_THREE_DB, MINUS_THREE_DB)
                         } else {
-                            Stereo(MINUS_THREE_DB, (1.0 - MINUS_THREE_DB))
+                            Stereo(MINUS_THREE_DB, 1.0 - MINUS_THREE_DB)
                         };
                         let delta = Stereo(-pan_squared, pan_squared) * scale * new_pan.signum();
                         Stereo(MINUS_THREE_DB, MINUS_THREE_DB) + delta
