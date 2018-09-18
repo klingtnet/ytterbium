@@ -136,7 +136,7 @@ fn build_wavetables(
     // use sine if only 1 harmonic is left, otherwise the last table for waveforms with
     // only odd harmonics would be empty!
     while harmonics > 0 {
-        let mut fft = Radix4::new(table_size, INVERSE);
+        let fft = Radix4::new(table_size, INVERSE);
         let mut spectrum = vec![num::Complex::zero(); table_size];
         let mut signal = spectrum.clone();
 
