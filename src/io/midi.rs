@@ -37,8 +37,8 @@ impl MidiReceiver {
             Err(RunError::NoMidiDeviceAvailable)
         } else {
             Ok(MidiReceiver {
-                context: context,
-                in_ports: in_ports,
+                context,
+                in_ports,
                 buf_len: BUF_LEN,
             })
         }
@@ -54,14 +54,8 @@ impl MidiReceiver {
 
     fn to_control_event(&self, event: MidiEvent) -> ControlEvent {
         match event {
-            MidiEvent::NoteOn { key, velocity, .. } => ControlEvent::NoteOn {
-                key: key,
-                velocity: velocity,
-            },
-            MidiEvent::NoteOff { key, velocity, .. } => ControlEvent::NoteOff {
-                key: key,
-                velocity: velocity,
-            },
+            MidiEvent::NoteOn { key, velocity, .. } => ControlEvent::NoteOn { key, velocity },
+            MidiEvent::NoteOff { key, velocity, .. } => ControlEvent::NoteOff { key, velocity },
             _ => ControlEvent::Unsupported,
         }
     }
@@ -120,37 +114,37 @@ impl From<portmidi::MidiEvent> for MidiEvent {
                     0x80 => MidiEvent::NoteOff {
                         key: data1 as u8,
                         velocity: data2 as Float / 127.0,
-                        channel: channel,
+                        channel,
                     },
                     0x90 => MidiEvent::NoteOn {
                         key: data1 as u8,
                         velocity: data2 as Float / 127.0,
-                        channel: channel,
+                        channel,
                     },
                     0xA0 => MidiEvent::PolyphonicKeyPressure {
                         key: data1 as u8,
                         velocity: data2 as Float / 127.0,
-                        channel: channel,
+                        channel,
                     },
                     0xB0 => match data1 {
                         120...127 => MidiEvent::Unsupported,
                         _ => MidiEvent::ControlChange {
                             controller: data1 as u8,
                             value: data2 as Float / 127.0,
-                            channel: channel,
+                            channel,
                         },
                     },
                     0xC0 => MidiEvent::ProgramChange {
                         program: data1 as u8,
-                        channel: channel,
+                        channel,
                     },
                     0xD0 => MidiEvent::ChannelPressure {
                         pressure: data1 as u8,
-                        channel: channel,
+                        channel,
                     },
                     0xE0 => MidiEvent::PitchBend {
                         pitchbend: data1 as u16 + ((data2 as u16) << 8),
-                        channel: channel,
+                        channel,
                     },
                     _ => MidiEvent::Unknown,
                 }

@@ -31,7 +31,7 @@ impl OscReceiver {
     pub fn new(addr: SocketAddr) -> Result<Self, RunError> {
         let socket = try!(UdpSocket::bind(addr).map_err(RunError::IoError));
         Ok(OscReceiver {
-            socket: socket,
+            socket,
             buf: [0u8; rosc::decoder::MTU],
             transpose: 0u8,
             note_grid: [0.0; GRID_SIZE + TRANSPOSE_RANGE * 12],
@@ -143,7 +143,7 @@ impl OscReceiver {
                             _ => None,
                         };
                         events.push(ControlEvent::Filter {
-                            filter_type: filter_type,
+                            filter_type,
                             freq: None,
                             q: None,
                         })
@@ -287,7 +287,7 @@ impl OscReceiver {
                             } {
                                 events.push(ControlEvent::Waveform {
                                     id: address[0].to_owned(),
-                                    waveform: waveform,
+                                    waveform,
                                 })
                             }
                         }

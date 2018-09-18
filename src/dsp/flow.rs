@@ -15,12 +15,12 @@ pub struct Flow {
 impl Flow {
     pub fn new(source: VoiceManager, sink: BufferSink, sample_rate: usize) -> Self {
         Flow {
-            source: source,
+            source,
             links: vec![
                 SharedMut::wrap(Filter::new(sample_rate)),
                 SharedMut::wrap(SoftLimiter {}),
             ],
-            sink: sink,
+            sink,
         }
     }
 }
@@ -63,7 +63,7 @@ impl BufferSink {
         BufferSink {
             position: 0,
             buffer: vec![Stereo::default(); chunk_size],
-            ring_buffer: ring_buffer,
+            ring_buffer,
         }
     }
 }

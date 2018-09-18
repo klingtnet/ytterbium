@@ -112,9 +112,9 @@ fn get_args() -> Args {
     );
 
     Args {
-        socket_addr_in: socket_addr_in,
-        socket_addr_out: socket_addr_out,
-        sample_rate: sample_rate,
+        socket_addr_in,
+        socket_addr_out,
+        sample_rate,
     }
 }
 

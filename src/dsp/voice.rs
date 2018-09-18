@@ -44,10 +44,10 @@ impl Voice {
         Voice {
             // use offset instead of nested vector
             fm_mod: vec![0.0; OSC_CNT * OSC_CNT],
-            levels: levels,
+            levels,
             pan: vec![Stereo(MINUS_THREE_DB, MINUS_THREE_DB); OSC_CNT],
-            volume_envelopes: volume_envelopes,
-            oscillators: oscillators,
+            volume_envelopes,
+            oscillators,
         }
     }
     fn running(&self) -> bool {
@@ -161,7 +161,7 @@ impl VoiceManager {
             ));
         }
         VoiceManager {
-            voices: voices,
+            voices,
             note_queue: VecDeque::with_capacity(max_voices),
         }
     }

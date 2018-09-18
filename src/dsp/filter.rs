@@ -28,11 +28,11 @@ impl Filter {
         let filter_type = FilterType::LP;
         let (As, Bs) = Filter::coeffs(w, q, filter_type);
         Filter {
-            sample_rate: sample_rate,
-            filter_type: filter_type,
-            fc: fc,
-            q: q,
-            w: w,
+            sample_rate,
+            filter_type,
+            fc,
+            q,
+            w,
             a: 1.0, // unity gain
             coeffs: (As, Bs),
             Xs: [Stereo::default(); 2],

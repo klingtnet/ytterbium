@@ -249,7 +249,7 @@ impl WavetableOsc {
     ) -> Self {
         WavetableOsc {
             phase_incr: 0.0,
-            sample_rate: sample_rate,
+            sample_rate,
             key: 0,
             detune_hz: 0.0, // Hz
             phase: 0.0,
@@ -259,7 +259,7 @@ impl WavetableOsc {
             last_sample: 0.0,
             waveform: Waveform::Sine,
             id: "".to_owned(),
-            pitch_convert: pitch_convert,
+            pitch_convert,
             tables: wavetables,
         }
     }
